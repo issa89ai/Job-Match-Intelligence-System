@@ -1,0 +1,36 @@
+scoring_version: "1.0.0"
+
+weights:
+  required_skill_coverage: 0.35
+  preferred_skill_coverage: 0.15
+  experience_alignment: 0.15
+  tool_alignment: 0.10
+  education_alignment: 0.10
+  domain_alignment: 0.10
+  semantic_alignment: 0.05
+
+penalties:
+  missing_critical_required_skill: 0.10
+  severe_experience_gap: 0.10
+  missing_required_degree: 0.15
+
+caps:
+  fail_hard_filter_max_score: 49.0
+  missing_multiple_critical_skills_max_score: 59.0
+
+fit_labels:
+  strong_fit:
+    min_score: 85
+    max_score: 100
+
+  good_fit:
+    min_score: 70
+    max_score: 84
+
+  partial_fit:
+    min_score: 55
+    max_score: 69
+
+  weak_fit:
+    min_score: 0
+    max_score: 54

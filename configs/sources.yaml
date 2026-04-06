@@ -1,0 +1,28 @@
+project:
+  name: "job-match-intelligence"
+  environment: "dev"
+  pipeline_version: "1.0.0"
+
+storage:
+  raw_jobs_dir: "data/raw/jobs"
+  staging_jobs_dir: "data/staging/jobs"
+  curated_requirements_dir: "data/curated/requirements"
+  curated_profiles_dir: "data/curated/profiles"
+  curated_matches_dir: "data/curated/matches"
+  evaluation_dir: "data/evaluation"
+
+ingestion:
+  request_timeout_seconds: 20
+  max_retries: 2
+  user_agent: "job-match-intelligence/1.0"
+
+sources:
+  greenhouse:
+    enabled: true
+    boards:
+      - "stripe"
+      - "airbnb"
+
+  lever:
+    enabled: false
+    companies: []

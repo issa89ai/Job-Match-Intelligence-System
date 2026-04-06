@@ -1,0 +1,16 @@
+[
+  {
+    "source_type": "greenhouse",
+    "source_name": "stripe",
+    "records_fetched": 494,
+    "records_normalized": 494,
+    "raw_snapshot_path": "data\\raw\\jobs\\greenhouse_stripe_jobs_raw_2026-04-06T03-18-32.json"
+  },
+  {
+    "source_type": "greenhouse",
+    "source_name": "airbnb",
+    "records_fetched": 253,
+    "records_normalized": 253,
+    "raw_snapshot_path": "data\\raw\\jobs\\greenhouse_airbnb_jobs_raw_2026-04-06T03-18-32.json"
+  }
+]

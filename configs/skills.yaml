@@ -1,0 +1,145 @@
+taxonomy_version: "1.0.0"
+
+skills:
+  python:
+    aliases: ["python", "python3", "py"]
+
+  r:
+    aliases: ["r", "r language", "r programming"]
+
+  sql:
+    aliases: ["sql", "postgresql", "mysql", "tsql", "pl/sql"]
+
+  java:
+    aliases: ["java"]
+
+  c_plus_plus:
+    aliases: ["c++", "cpp"]
+
+  c_sharp:
+    aliases: ["c#", ".net", "dotnet"]
+
+  javascript:
+    aliases: ["javascript", "js", "node.js", "nodejs"]
+
+  machine_learning:
+    aliases: ["machine learning", "ml"]
+
+  deep_learning:
+    aliases: ["deep learning", "dl", "neural networks"]
+
+  nlp:
+    aliases: ["nlp", "natural language processing"]
+
+  data_science:
+    aliases: ["data science", "data scientist"]
+
+  data_analysis:
+    aliases: ["data analysis", "data analytics", "analytical skills"]
+
+  pandas:
+    aliases: ["pandas"]
+
+  numpy:
+    aliases: ["numpy"]
+
+  scikit_learn:
+    aliases: ["scikit-learn", "sklearn"]
+
+  tensorflow:
+    aliases: ["tensorflow", "tf"]
+
+  pytorch:
+    aliases: ["pytorch", "torch"]
+
+  power_bi:
+    aliases: ["power bi", "powerbi"]
+
+  tableau:
+    aliases: ["tableau"]
+
+  excel:
+    aliases: ["excel", "microsoft excel"]
+
+  aws:
+    aliases: ["aws", "amazon web services"]
+
+  azure:
+    aliases: ["azure", "microsoft azure"]
+
+  gcp:
+    aliases: ["gcp", "google cloud", "google cloud platform"]
+
+  docker:
+    aliases: ["docker"]
+
+  kubernetes:
+    aliases: ["kubernetes", "k8s"]
+
+  spark:
+    aliases: ["spark", "apache spark"]
+
+  hadoop:
+    aliases: ["hadoop"]
+
+  fastapi:
+    aliases: ["fastapi"]
+
+  flask:
+    aliases: ["flask"]
+
+  streamlit:
+    aliases: ["streamlit"]
+
+  git:
+    aliases: ["git"]
+
+  github:
+    aliases: ["github"]
+
+  statistics:
+    aliases: ["statistics", "statistical analysis"]
+
+  linear_algebra:
+    aliases: ["linear algebra"]
+
+  data_visualization:
+    aliases: ["data visualization", "data visualisation", "visualization", "visualisation"]
+
+requirement_cues:
+  required:
+    - "must have"
+    - "required"
+    - "minimum qualifications"
+    - "basic qualifications"
+    - "you have"
+    - "need to have"
+    - "requirements"
+    - "required qualifications"
+
+  preferred:
+    - "preferred"
+    - "nice to have"
+    - "bonus"
+    - "preferred qualifications"
+    - "would be a plus"
+    - "good to have"
+    - "ideal candidate"
+
+education_aliases:
+  bachelor:
+    - "bachelor"
+    - "b.sc"
+    - "bs degree"
+    - "undergraduate degree"
+
+  master:
+    - "master"
+    - "m.sc"
+    - "ms degree"
+    - "graduate degree"
+
+  phd:
+    - "phd"
+    - "doctorate"
+    - "doctoral degree"
