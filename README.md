@@ -1,196 +1,187 @@
-\# Job Match Intelligence System 🚀
+A production-style data pipeline and intelligence system that collects real job postings, normalizes them, extracts requirements, and matches them with candidate profiles to compute fit scores and actionable insights.
 
+---
 
+## 📌 Overview
 
-An AI-powered system that collects real job postings, understands job requirements, and evaluates how well a candidate matches each role.
+This project builds an end-to-end **Job Intelligence Platform** that:
 
+- Collects real job postings from public sources
+- Normalizes and structures job data
+- Extracts job requirements (skills, experience, education)
+- Parses candidate profiles
+- Computes match scores between jobs and candidates
+- Provides explanations and recommendations
 
+The system follows a **multi-stage data pipeline architecture** similar to real-world data platforms.
 
-\---
+---
 
+## 🏗️ Architecture
 
 
-\## 📌 Project Overview
+Raw Data → Staging → Curated → Extracted → Matching → API/UI
 
 
+---
 
-This project builds a real-world pipeline that:
+## 📂 Project Structure
 
 
-
-\- Collects job postings from public APIs (Greenhouse, Lever)
-
-\- Cleans and normalizes job descriptions
-
-\- Extracts key requirements (skills, tools, experience)
-
-\- Compares jobs with a candidate profile or CV
-
-\- Generates a match score and highlights missing skills
-
-
-
-\---
-
-
-
-\## 🧠 Motivation
-
-
-
-Job seekers often struggle to understand:
-
-
-
-\- Am I qualified for this job?
-
-\- What skills am I missing?
-
-\- Which jobs fit me best?
-
-
-
-This system answers those questions using AI.
-
-
-
-\---
-
-
-
-\## ⚙️ Features (Current)
-
-
-
-✔ Real job data collection  
-
-✔ Data cleaning and normalization  
-
-✔ Structured dataset generation  
-
-
-
-\---
-
-
-
-\## 🔜 Upcoming Features
-
-
-
-\- Skill extraction using NLP
-
-\- Resume parsing
-
-\- Match scoring engine
-
-\- Gap analysis (missing skills)
-
-\- Streamlit dashboard
-
-\- API deployment (FastAPI)
-
-
-
-\---
-
-
-
-\## 📂 Project Structure
-
-
-
-
-
-job-match-intelligence-system/
-
+job-match-intelligence/
 │
-
+├── configs/
+│ ├── sources.yaml
+│ ├── skills.yaml
+│ └── scoring.yaml
+│
 ├── data/
-
 │ ├── raw/
-
-│ └── processed/
-
+│ ├── staging/
+│ ├── curated/
+│ └── evaluation/
 │
-
 ├── src/
-
-│ ├── collectors/
-
-│ ├── processing/
-
-│ ├── nlp/
-
+│ ├── ingestion/
+│ ├── normalization/
+│ ├── extraction/
+│ ├── candidate/
 │ ├── matching/
-
+│ ├── api/
+│ ├── utils/
+│ └── evaluation/
 │
-
+├── tests/
+├── notebooks/
 ├── requirements.txt
-
-├── README.md
-
+└── README.md
 
 
+---
+
+## ✅ Current System Status
+
+### ✔ Phase 1 — Foundation
+- Config-driven architecture (YAML)
+- Utilities for I/O, logging, and text processing
+
+### ✔ Phase 2 — Ingestion Pipeline
+- Fetches jobs from Greenhouse (Stripe, Airbnb)
+- Stores raw snapshots
+- Converts data into unified schema
+- Saves staging dataset
+- Structured logging
+
+📊 Result:
+- ~747 real job postings collected
+
+---
+
+### ✔ Phase 3 — Normalization Pipeline
+- Title normalization (job family, seniority)
+- Location normalization (country, region, workplace type)
+- Text cleaning and standardization
+- Deduplication using hashes
+
+📂 Output:
+
+data/curated/requirements/jobs_curated_*.csv
 
 
-\---
+---
 
+## 🧠 Data Layers
 
+### 1. Raw Layer
+- Original API responses
+- Full traceability
 
-\## 🚀 How to Run
+### 2. Staging Layer
+- Unified schema across sources
+- Cleaned structure
 
+### 3. Curated Layer
+- Normalized and enriched data
+- Ready for intelligence processing
 
+---
 
-\### 1. Install dependencies
+## ⚙️ How to Run
+
+### 1. Install dependencies
 
 ```bash
-
 pip install -r requirements.txt
+2. Run Ingestion
+python -m src.ingestion.pipeline
 
-2\. Collect jobs
+Outputs:
 
-python src/collectors/run\_collection.py
+data/raw/jobs/
+data/staging/jobs/
+3. Run Normalization
 
-3\. Clean jobs
+Update input file in:
 
-python src/processing/clean\_jobs.py
+src/normalization/jobs.py
 
+Then run:
+
+python -m src.normalization.jobs
+
+Outputs:
+
+data/curated/requirements/
 📊 Example Output
+Normalized Job Record
+{
+  "title_normalized": "account_executive",
+  "job_family": "sales",
+  "seniority_level": "",
+  "country": "brazil",
+  "region": "south_america",
+  "workplace_type": "onsite"
+}
+🚀 Next Phases
+🔹 Phase 4 — Requirement Extraction
+Extract skills (required vs preferred)
+Extract experience requirements
+Extract education requirements
+🔹 Phase 5 — Candidate Understanding
+Parse resumes
+Extract skills, experience, education
+🔹 Phase 6 — Matching Engine
+Hard filters
+Scoring system (config-driven)
+Ranking
+Explainability
+🔹 Phase 7 — API (FastAPI)
+Expose matching as a service
+🔹 Phase 8 — Evaluation
+Measure extraction accuracy
+Evaluate ranking quality
+🔹 Phase 9 — UI (Streamlit)
+Resume upload
+Job matching visualization
+Recommendations
+🧠 Design Principles
+Modular architecture
+Config-driven system
+Layered data pipeline
+Reproducibility
+Explainability (no black-box logic)
+Extensibility (multi-source support)
+📈 Future Improvements
+NLP-based semantic matching
+Embedding models (Sentence Transformers)
+ML-based scoring
+Advanced resume parsing
+Geo-location enrichment APIs
+💡 Key Insight
 
-700+ real job postings collected
+Most of the system complexity is in:
 
-Cleaned dataset ready for NLP
-
-Structured job descriptions
-
-🛠 Tech Stack
-
-Python
-
-pandas
-
-BeautifulSoup
-
-requests
-
-scikit-learn (next phase)
-
-NLP (next phase)
-
-📌 Future Direction
-
-
-
-This project will evolve into a full AI system capable of:
-
-
-
-Matching candidates to jobs automatically
-
-Recommending skill improvements
-
-Ranking jobs based on fit
+Data cleaning, normalization, and structuring — not the model itself.
 
 👨‍💻 Author
 
