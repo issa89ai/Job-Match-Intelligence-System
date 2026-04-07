@@ -1,0 +1,9 @@
+2026-04-06 22:41:39 | INFO | __main__ | Starting job normalization pipeline
+2026-04-06 22:41:39 | INFO | __main__ | Loading staging jobs from data/staging/jobs/jobs_staging_2026-04-06T03-18-32.csv
+2026-04-06 22:41:39 | INFO | __main__ | Initial staging record count=747
+2026-04-06 22:54:33 | INFO | __main__ | Starting job normalization pipeline
+2026-04-06 22:54:33 | INFO | __main__ | Loading staging jobs from data/staging/jobs/jobs_staging_2026-04-06T03-18-32.csv
+2026-04-06 22:54:34 | INFO | __main__ | Initial staging record count=747
+2026-04-06 22:54:34 | INFO | __main__ | Final curated record count=747
+2026-04-06 22:54:40 | INFO | __main__ | Saved curated CSV: data\curated\requirements\jobs_curated_2026-04-07T02-54-33.csv
+2026-04-06 22:54:40 | INFO | __main__ | Saved curated JSON: data\curated\requirements\jobs_curated_2026-04-07T02-54-33.json
