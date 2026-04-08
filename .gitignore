@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# Data files
+data/raw/
+data/staging/
+data/curated/
+data/curated/requirements_enriched/
+
+# Environment
+venv/
+.env
+
+# OS
+.DS_Store
+Thumbs.db

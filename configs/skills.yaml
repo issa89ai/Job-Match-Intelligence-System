@@ -1,145 +1,159 @@
-taxonomy_version: "1.0.0"
-
 skills:
   python:
-    aliases: ["python", "python3", "py"]
-
-  r:
-    aliases: ["r", "r language", "r programming"]
+    - python
 
   sql:
-    aliases: ["sql", "postgresql", "mysql", "tsql", "pl/sql"]
-
-  java:
-    aliases: ["java"]
-
-  c_plus_plus:
-    aliases: ["c++", "cpp"]
-
-  c_sharp:
-    aliases: ["c#", ".net", "dotnet"]
-
-  javascript:
-    aliases: ["javascript", "js", "node.js", "nodejs"]
+    - sql
+    - mysql
+    - postgresql
+    - postgres
+    - tsql
 
   machine_learning:
-    aliases: ["machine learning", "ml"]
+    - machine learning
+    - ml
 
   deep_learning:
-    aliases: ["deep learning", "dl", "neural networks"]
-
-  nlp:
-    aliases: ["nlp", "natural language processing"]
-
-  data_science:
-    aliases: ["data science", "data scientist"]
+    - deep learning
+    - neural networks
+    - pytorch
+    - tensorflow
+    - keras
 
   data_analysis:
-    aliases: ["data analysis", "data analytics", "analytical skills"]
+    - data analysis
+    - data analytics
+    - analytics
 
   pandas:
-    aliases: ["pandas"]
+    - pandas
 
   numpy:
-    aliases: ["numpy"]
+    - numpy
 
   scikit_learn:
-    aliases: ["scikit-learn", "sklearn"]
-
-  tensorflow:
-    aliases: ["tensorflow", "tf"]
-
-  pytorch:
-    aliases: ["pytorch", "torch"]
-
-  power_bi:
-    aliases: ["power bi", "powerbi"]
-
-  tableau:
-    aliases: ["tableau"]
-
-  excel:
-    aliases: ["excel", "microsoft excel"]
-
-  aws:
-    aliases: ["aws", "amazon web services"]
-
-  azure:
-    aliases: ["azure", "microsoft azure"]
-
-  gcp:
-    aliases: ["gcp", "google cloud", "google cloud platform"]
-
-  docker:
-    aliases: ["docker"]
-
-  kubernetes:
-    aliases: ["kubernetes", "k8s"]
+    - scikit-learn
+    - sklearn
 
   spark:
-    aliases: ["spark", "apache spark"]
+    - spark
+    - pyspark
 
-  hadoop:
-    aliases: ["hadoop"]
+  aws:
+    - aws
+    - amazon web services
+
+  azure:
+    - azure
+
+  gcp:
+    - gcp
+    - google cloud
+
+  docker:
+    - docker
+
+  kubernetes:
+    - kubernetes
+    - k8s
 
   fastapi:
-    aliases: ["fastapi"]
+    - fastapi
 
   flask:
-    aliases: ["flask"]
+    - flask
 
   streamlit:
-    aliases: ["streamlit"]
+    - streamlit
+
+  tableau:
+    - tableau
+
+  power_bi:
+    - power bi
+    - powerbi
+
+  excel:
+    - excel
 
   git:
-    aliases: ["git"]
+    - git
 
-  github:
-    aliases: ["github"]
+  linux:
+    - linux
+
+  airflow:
+    - airflow
+
+  dbt:
+    - dbt
+
+  hadoop:
+    - hadoop
+
+  communication:
+    - communication
+    - verbal communication
+    - written communication
+
+  leadership:
+    - leadership
 
   statistics:
-    aliases: ["statistics", "statistical analysis"]
+    - statistics
+    - statistical analysis
 
-  linear_algebra:
-    aliases: ["linear algebra"]
+  nlp:
+    - nlp
+    - natural language processing
 
-  data_visualization:
-    aliases: ["data visualization", "data visualisation", "visualization", "visualisation"]
+  llm:
+    - llm
+    - large language model
+    - large language models
+    - gpt
+    - llama
 
-requirement_cues:
-  required:
-    - "must have"
-    - "required"
-    - "minimum qualifications"
-    - "basic qualifications"
-    - "you have"
-    - "need to have"
-    - "requirements"
-    - "required qualifications"
+  data_engineering:
+    - data engineering
+    - data pipeline
+    - etl
+    - elt
 
-  preferred:
-    - "preferred"
-    - "nice to have"
-    - "bonus"
-    - "preferred qualifications"
-    - "would be a plus"
-    - "good to have"
-    - "ideal candidate"
+  mlops:
+    - mlops
+    - model deployment
+    - model serving
 
-education_aliases:
-  bachelor:
-    - "bachelor"
-    - "b.sc"
-    - "bs degree"
-    - "undergraduate degree"
+  api:
+    - api
+    - rest api
 
-  master:
-    - "master"
-    - "m.sc"
-    - "ms degree"
-    - "graduate degree"
+  sales:
+    - sales
+    - selling
+    - sales cycle
 
-  phd:
-    - "phd"
-    - "doctorate"
-    - "doctoral degree"
+  negotiation:
+    - negotiation
+    - negotiating
+    - negotiations
+
+  crm:
+    - crm
+    - salesforce
+
+  strategy:
+    - strategy
+    - strategic
+
+  ai:
+    - ai
+    - artificial intelligence
+
+  enterprise:
+    - enterprise
+
+  presentation:
+    - presentation
+    - presentation skills
