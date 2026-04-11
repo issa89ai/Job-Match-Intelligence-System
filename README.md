@@ -158,6 +158,14 @@ Ready for intelligence processing
 4. Extracted Layer
 Structured requirements from job descriptions
 
+### Stage 8 — UI Layer (Streamlit)
+- Professional frontend for job-candidate matching
+- Job and candidate input forms
+- API-connected scoring workflow
+- Visual display of score, filters, gaps, and recommendations
+- Demo-ready interface
+
+
 ⚙️ How to Run
 1️⃣ Install dependencies
 pip install -r requirements.txt
@@ -183,10 +191,7 @@ Explainability (no black-box logic)
 Extensibility (multi-source ready)
 
  Next Steps
-🔹 Stage 8 — UI (Streamlit)
-Upload/paste candidate
-Paste/select job
-Visualize score and gaps
+
 
 🔹 Stage 9 — Evaluation
 Extraction accuracy (precision/recall)
