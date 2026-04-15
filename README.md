@@ -165,7 +165,7 @@ Structured requirements from job descriptions
 - Visual display of score, filters, gaps, and recommendations
 - Demo-ready interface
 
-## 📊 Evaluation Results
+## 📊 Evaluation (Stage 9)
 
 ### Extraction Performance
 - Precision: 0.75
@@ -176,8 +176,9 @@ Structured requirements from job descriptions
 - Accuracy: 66.7%
 
 ### Interpretation
-The system achieves solid baseline performance with higher precision than recall, indicating accurate but slightly conservative extraction. Matching results show reasonable alignment with human judgment.
+The system demonstrates solid baseline performance. Extraction shows higher precision than recall, indicating accurate but slightly conservative skill detection. Matching results align reasonably well with human judgment.
 
+Future improvements include NLP-based extraction and data-driven scoring models.
 ⚙️ How to Run
 1️⃣ Install dependencies
 pip install -r requirements.txt

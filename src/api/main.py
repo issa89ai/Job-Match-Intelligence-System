@@ -338,3 +338,7 @@ def match_candidate_to_job(payload: MatchRequest) -> MatchResponse:
     result = rank_candidate_for_job(job_features, candidate_features)
 
     return MatchResponse(**result)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("src.api.main:app", host="127.0.0.1", port=8000, reload=True)
