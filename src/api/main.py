@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from typing import Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from src.api.schemas import HealthResponse, MatchRequest, MatchResponse
@@ -29,6 +30,7 @@ from src.db.database import Base, engine, get_db
 from src.db.models import CandidateProfileRecord, User, UserPreferenceRecord
 from src.matching.ranking import rank_candidate_for_job
 
+security = HTTPBearer()
 
 Base.metadata.create_all(bind=engine)
 
@@ -64,16 +66,11 @@ def _json_load(value: Optional[str]):
 
 
 def get_current_user(
-    authorization: Optional[str] = Header(default=None),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid Authorization header.",
-        )
+    token = credentials.credentials
 
-    token = authorization.replace("Bearer ", "").strip()
     email = decode_access_token(token)
 
     if not email:
@@ -83,6 +80,7 @@ def get_current_user(
         )
 
     user = db.query(User).filter(User.email == email).first()
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -339,6 +337,8 @@ def match_candidate_to_job(payload: MatchRequest) -> MatchResponse:
 
     return MatchResponse(**result)
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("src.api.main:app", host="127.0.0.1", port=8000, reload=True)
