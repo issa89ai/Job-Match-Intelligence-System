@@ -44,14 +44,17 @@ saved profiles, and saved preferences.
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=[
-        {"name": "Matching", "description": "Core job-candidate matching endpoints."},
         {"name": "Auth", "description": "User registration and login."},
         {"name": "Profile", "description": "Save and load candidate profile."},
         {"name": "Preferences", "description": "Save and load job preferences."},
+        {"name": "Matching", "description": "Core job-candidate matching endpoints."},
     ],
 )
 
 
+# -----------------------------
+# Helpers
+# -----------------------------
 def _json_dump(value) -> str:
     return json.dumps(value or [], ensure_ascii=False)
 
@@ -70,7 +73,6 @@ def get_current_user(
     db: Session = Depends(get_db),
 ) -> User:
     token = credentials.credentials
-
     email = decode_access_token(token)
 
     if not email:
@@ -90,6 +92,9 @@ def get_current_user(
     return user
 
 
+# -----------------------------
+# Health
+# -----------------------------
 @app.get("/", response_model=HealthResponse, include_in_schema=False)
 def root() -> HealthResponse:
     return HealthResponse(status="ok", message="Job Match Intelligence API is running.")
@@ -100,13 +105,22 @@ def health() -> HealthResponse:
     return HealthResponse(status="ok", message="Service healthy.")
 
 
+# -----------------------------
+# Auth
+# 1. Register
+# 2. Login
+# 3. Get Me
+# -----------------------------
 @app.post(
     "/auth/register",
     response_model=AuthResponse,
     tags=["Auth"],
     summary="Register a new user",
 )
-def register_user(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthResponse:
+def register_user(
+    payload: RegisterRequest,
+    db: Session = Depends(get_db),
+) -> AuthResponse:
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered.")
@@ -116,6 +130,7 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)) -> Au
         password_hash=hash_password(payload.password),
         full_name=payload.full_name,
     )
+
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -135,8 +150,12 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)) -> Au
     tags=["Auth"],
     summary="Login user",
 )
-def login_user(payload: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
+def login_user(
+    payload: LoginRequest,
+    db: Session = Depends(get_db),
+) -> AuthResponse:
     user = db.query(User).filter(User.email == payload.email).first()
+
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
@@ -163,6 +182,11 @@ def get_me(current_user: User = Depends(get_current_user)) -> UserMeResponse:
     )
 
 
+# -----------------------------
+# Profile
+# 4. Save Profile
+# 5. Load Profile
+# -----------------------------
 @app.post(
     "/profile",
     response_model=SavedProfileResponse,
@@ -252,6 +276,11 @@ def load_profile(
     )
 
 
+# -----------------------------
+# Preferences
+# 6. Save Preferences
+# 7. Load Preferences
+# -----------------------------
 @app.post(
     "/preferences",
     response_model=PreferenceResponse,
@@ -320,6 +349,10 @@ def load_preferences(
     )
 
 
+# -----------------------------
+# Matching
+# 8. Match
+# -----------------------------
 @app.post(
     "/match",
     response_model=MatchResponse,
