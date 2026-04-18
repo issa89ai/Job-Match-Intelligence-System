@@ -45,50 +45,45 @@ def api_get(api_url: str, endpoint: str) -> Dict[str, Any]:
     return response.json()
 
 
-def safe_set_profile_fields(profile: Dict[str, Any]) -> None:
-    st.session_state["candidate_id"] = profile.get("candidate_id", "")
-    st.session_state["full_name"] = profile.get("full_name", "")
-    st.session_state["current_title"] = profile.get("current_title", "")
-    st.session_state["location"] = profile.get("location", "")
-    st.session_state["education"] = profile.get("education", "")
-    st.session_state["years_experience"] = int(profile.get("years_experience", 0) or 0)
-    st.session_state["skills"] = ", ".join(profile.get("skills", []))
-    st.session_state["tools"] = ", ".join(profile.get("tools", []))
-    st.session_state["domains"] = ", ".join(profile.get("domains", []))
-    st.session_state["certifications"] = ", ".join(profile.get("certifications", []))
-    st.session_state["projects"] = ", ".join(profile.get("projects", []))
-    st.session_state["candidate_seniority"] = profile.get("seniority", "")
-    st.session_state["summary"] = profile.get("summary", "")
-
-
 def build_candidate_payload() -> Dict[str, Any]:
     return {
-        "candidate_id": st.session_state.get("candidate_id", ""),
-        "full_name": st.session_state.get("full_name", ""),
-        "current_title": st.session_state.get("current_title", ""),
-        "location": st.session_state.get("location", ""),
-        "education": st.session_state.get("education", ""),
+        "candidate_id": st.session_state.get("candidate_id", "").strip(),
+        "full_name": st.session_state.get("full_name", "").strip(),
+        "current_title": st.session_state.get("current_title", "").strip(),
+        "location": st.session_state.get("location", "").strip(),
+        "education": st.session_state.get("education", "").strip(),
         "years_experience": int(st.session_state.get("years_experience", 0)),
         "skills": split_csv(st.session_state.get("skills", "")),
         "tools": split_csv(st.session_state.get("tools", "")),
         "domains": split_csv(st.session_state.get("domains", "")),
         "certifications": split_csv(st.session_state.get("certifications", "")),
         "projects": split_csv(st.session_state.get("projects", "")),
-        "seniority": st.session_state.get("candidate_seniority", ""),
-        "summary": st.session_state.get("summary", ""),
+        "seniority": st.session_state.get("candidate_seniority", "").strip(),
+        "summary": st.session_state.get("summary", "").strip(),
     }
 
 
 def build_job_payload() -> Dict[str, Any]:
     return {
-        "job_id": st.session_state.get("job_id", ""),
-        "title": st.session_state.get("job_title", ""),
+        "job_id": st.session_state.get("job_id", "").strip(),
+        "title": st.session_state.get("job_title", "").strip(),
         "required_skills": split_csv(st.session_state.get("required_skills", "")),
         "preferred_skills": split_csv(st.session_state.get("preferred_skills", "")),
         "other_skills": split_csv(st.session_state.get("other_skills", "")),
         "years_experience_required": int(st.session_state.get("job_years_required", 0)),
-        "education_required": st.session_state.get("job_education", ""),
-        "seniority": st.session_state.get("job_seniority", ""),
+        "education_required": st.session_state.get("job_education", "").strip(),
+        "seniority": st.session_state.get("job_seniority", "").strip(),
+    }
+
+
+def build_preferences_payload() -> Dict[str, Any]:
+    return {
+        "preferred_titles": split_csv(st.session_state.get("pref_titles", "")),
+        "preferred_locations": split_csv(st.session_state.get("pref_locations", "")),
+        "preferred_workplace_types": split_csv(st.session_state.get("pref_workplace", "")),
+        "preferred_domains": split_csv(st.session_state.get("pref_domains", "")),
+        "preferred_seniority": st.session_state.get("pref_seniority", "").strip() or None,
+        "min_score": int(st.session_state.get("pref_score", 50)),
     }
 
 
@@ -115,6 +110,44 @@ def load_demo_data() -> None:
     st.session_state["projects"] = "job match intelligence system, churn prediction deployment"
     st.session_state["candidate_seniority"] = "senior"
     st.session_state["summary"] = "Built end-to-end machine learning and analytics projects."
+
+    st.session_state["pref_titles"] = "Data Scientist, ML Engineer"
+    st.session_state["pref_locations"] = "Canada, Remote"
+    st.session_state["pref_workplace"] = "remote, hybrid"
+    st.session_state["pref_domains"] = "AI, Analytics"
+    st.session_state["pref_seniority"] = "senior"
+    st.session_state["pref_score"] = 70
+
+
+def apply_loaded_profile_if_any() -> None:
+    profile = st.session_state.pop("_loaded_profile", None)
+    if profile:
+        st.session_state["candidate_id"] = profile.get("candidate_id", "")
+        st.session_state["full_name"] = profile.get("full_name", "")
+        st.session_state["current_title"] = profile.get("current_title", "")
+        st.session_state["location"] = profile.get("location", "")
+        st.session_state["education"] = profile.get("education", "")
+        st.session_state["years_experience"] = int(profile.get("years_experience", 0) or 0)
+        st.session_state["skills"] = ", ".join(profile.get("skills", []))
+        st.session_state["tools"] = ", ".join(profile.get("tools", []))
+        st.session_state["domains"] = ", ".join(profile.get("domains", []))
+        st.session_state["certifications"] = ", ".join(profile.get("certifications", []))
+        st.session_state["projects"] = ", ".join(profile.get("projects", []))
+        st.session_state["candidate_seniority"] = profile.get("seniority", "")
+        st.session_state["summary"] = profile.get("summary", "")
+
+
+def apply_loaded_preferences_if_any() -> None:
+    preferences = st.session_state.pop("_loaded_preferences", None)
+    if preferences:
+        st.session_state["pref_titles"] = ", ".join(preferences.get("preferred_titles", []))
+        st.session_state["pref_locations"] = ", ".join(preferences.get("preferred_locations", []))
+        st.session_state["pref_workplace"] = ", ".join(
+            preferences.get("preferred_workplace_types", [])
+        )
+        st.session_state["pref_domains"] = ", ".join(preferences.get("preferred_domains", []))
+        st.session_state["pref_seniority"] = preferences.get("preferred_seniority", "") or ""
+        st.session_state["pref_score"] = int(preferences.get("min_score", 50) or 50)
 
 
 # -----------------------------
@@ -145,10 +178,20 @@ defaults = {
     "job_years_required": 0,
     "job_education": "",
     "job_seniority": "",
+    "pref_titles": "",
+    "pref_locations": "",
+    "pref_workplace": "",
+    "pref_domains": "",
+    "pref_seniority": "",
+    "pref_score": 50,
 }
 for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
+
+# Apply loaded data BEFORE widgets are created
+apply_loaded_profile_if_any()
+apply_loaded_preferences_if_any()
 
 
 # -----------------------------
@@ -168,15 +211,16 @@ with st.sidebar:
         reg_email = st.text_input("Email", key="reg_email")
         reg_password = st.text_input("Password", type="password", key="reg_password")
         reg_full_name = st.text_input("Full Name", key="reg_full_name")
+
         if st.button("Register"):
             try:
                 result = api_post(
                     st.session_state["api_url"],
                     "/auth/register",
                     {
-                        "email": reg_email,
+                        "email": reg_email.strip(),
                         "password": reg_password,
-                        "full_name": reg_full_name,
+                        "full_name": reg_full_name.strip(),
                     },
                 )
                 st.session_state["token"] = result["access_token"]
@@ -188,13 +232,14 @@ with st.sidebar:
     else:
         login_email = st.text_input("Email", key="login_email")
         login_password = st.text_input("Password", type="password", key="login_password")
+
         if st.button("Login"):
             try:
                 result = api_post(
                     st.session_state["api_url"],
                     "/auth/login",
                     {
-                        "email": login_email,
+                        "email": login_email.strip(),
                         "password": login_password,
                     },
                 )
@@ -206,10 +251,12 @@ with st.sidebar:
 
     if st.session_state["token"]:
         st.caption(f"Current user: {st.session_state['logged_in_email']}")
+
         if st.button("Check /me"):
             try:
                 me = api_get(st.session_state["api_url"], "/me")
-                st.success(json.dumps(me, indent=2))
+                st.success("Authenticated successfully")
+                st.json(me)
             except Exception as e:
                 st.error(f"/me failed: {e}")
 
@@ -229,7 +276,10 @@ with st.sidebar:
 # Main UI
 # -----------------------------
 st.title("🎯 Job Match Intelligence System")
-st.write("Compare a candidate profile against a job profile and generate an explainable match score, gaps, and recommendations.")
+st.write(
+    "Register or login, save your candidate profile, save your preferences, "
+    "load them later, and compare your profile against a job profile."
+)
 
 col1, col2 = st.columns(2)
 
@@ -261,10 +311,25 @@ with col2:
     st.text_area("Summary", key="summary", height=100)
 
 st.divider()
+st.header("User Preferences")
 
-action_col1, action_col2, action_col3, action_col4 = st.columns([1, 1, 1, 2])
+pref_col1, pref_col2 = st.columns(2)
 
-with action_col1:
+with pref_col1:
+    st.text_input("Preferred Titles (comma-separated)", key="pref_titles")
+    st.text_input("Preferred Locations (comma-separated)", key="pref_locations")
+    st.text_input("Preferred Workplace Types (remote, hybrid, onsite)", key="pref_workplace")
+
+with pref_col2:
+    st.text_input("Preferred Domains (comma-separated)", key="pref_domains")
+    st.selectbox("Preferred Seniority", ["", "junior", "mid", "senior"], key="pref_seniority")
+    st.slider("Minimum Match Score", 0, 100, key="pref_score")
+
+st.divider()
+
+row1_col1, row1_col2, row1_col3, row1_col4 = st.columns([1, 1, 1, 2])
+
+with row1_col1:
     if st.button("Save Profile", use_container_width=True):
         if not st.session_state["token"]:
             st.error("Please login first.")
@@ -277,19 +342,19 @@ with action_col1:
             except Exception as e:
                 st.error(f"Save profile failed: {e}")
 
-with action_col2:
+with row1_col2:
     if st.button("Load Profile", use_container_width=True):
         if not st.session_state["token"]:
             st.error("Please login first.")
         else:
             try:
                 profile = api_get(st.session_state["api_url"], "/profile")
-                safe_set_profile_fields(profile)
-                st.success("Profile loaded into the form.")
+                st.session_state["_loaded_profile"] = profile
+                st.rerun()
             except Exception as e:
                 st.error(f"Load profile failed: {e}")
 
-with action_col3:
+with row1_col3:
     if st.button("Preview JSON Payload", use_container_width=True):
         st.json(
             {
@@ -298,8 +363,35 @@ with action_col3:
             }
         )
 
-with action_col4:
+with row1_col4:
     run_match = st.button("Run Match Analysis", use_container_width=True)
+
+row2_col1, row2_col2 = st.columns(2)
+
+with row2_col1:
+    if st.button("Save Preferences", use_container_width=True):
+        if not st.session_state["token"]:
+            st.error("Please login first.")
+        else:
+            try:
+                payload = build_preferences_payload()
+                saved = api_post(st.session_state["api_url"], "/preferences", payload)
+                st.success("Preferences saved successfully.")
+                st.json(saved)
+            except Exception as e:
+                st.error(f"Save preferences failed: {e}")
+
+with row2_col2:
+    if st.button("Load Preferences", use_container_width=True):
+        if not st.session_state["token"]:
+            st.error("Please login first.")
+        else:
+            try:
+                preferences = api_get(st.session_state["api_url"], "/preferences")
+                st.session_state["_loaded_preferences"] = preferences
+                st.rerun()
+            except Exception as e:
+                st.error(f"Load preferences failed: {e}")
 
 if run_match:
     try:
@@ -331,6 +423,7 @@ if run_match:
         comp_cols[4].metric("Seniority", f"{comp.get('seniority_score', 0) * 100:.1f}%")
 
         left, right = st.columns(2)
+
         with left:
             st.subheader("Matched Required Skills")
             matched_req = explanation.get("matched_required_skills", [])
