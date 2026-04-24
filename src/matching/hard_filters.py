@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List
 
 
 EDUCATION_ORDER = {
@@ -10,6 +10,17 @@ EDUCATION_ORDER = {
     "master": 4,
     "phd": 5,
 }
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None and value != "":
+            return value
+    return None
+
+
+def _normalize_text(value: Any) -> str:
+    return str(value or "").strip().lower()
 
 
 def _normalize_list(values) -> List[str]:
@@ -50,6 +61,17 @@ def check_experience(job_years_required, candidate_years) -> Dict:
             "gap": job_years_required,
         }
 
+    try:
+        job_years_required = float(job_years_required)
+        candidate_years = float(candidate_years)
+    except Exception:
+        return {
+            "job_years_required": job_years_required,
+            "candidate_years": candidate_years,
+            "passed": False,
+            "gap": None,
+        }
+
     gap = candidate_years - job_years_required
 
     return {
@@ -75,8 +97,8 @@ def check_education(job_education, candidate_education) -> Dict:
             "passed": False,
         }
 
-    job_rank = EDUCATION_ORDER.get(str(job_education).lower())
-    candidate_rank = EDUCATION_ORDER.get(str(candidate_education).lower())
+    job_rank = EDUCATION_ORDER.get(_normalize_text(job_education))
+    candidate_rank = EDUCATION_ORDER.get(_normalize_text(candidate_education))
 
     if job_rank is None or candidate_rank is None:
         return {
@@ -93,18 +115,28 @@ def check_education(job_education, candidate_education) -> Dict:
 
 
 def run_hard_filters(job_features: Dict, candidate_features: Dict) -> Dict:
+    job_years_required = _first_present(
+        job_features.get("years_experience_required"),
+        job_features.get("years_experience_extracted"),
+    )
+
+    job_education_required = _first_present(
+        job_features.get("education_required"),
+        job_features.get("education_extracted"),
+    )
+
     skill_check = check_required_skills(
         job_features.get("required_skills", []),
         candidate_features.get("skills", []),
     )
 
     experience_check = check_experience(
-        job_features.get("years_experience_extracted"),
+        job_years_required,
         candidate_features.get("years_experience"),
     )
 
     education_check = check_education(
-        job_features.get("education_extracted"),
+        job_education_required,
         candidate_features.get("education"),
     )
 

@@ -45,7 +45,11 @@ def api_get(api_url: str, endpoint: str) -> Dict[str, Any]:
     return response.json()
 
 
-def api_get_with_params(api_url: str, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def api_get_with_params(
+    api_url: str,
+    endpoint: str,
+    params: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     response = requests.get(
         f"{api_url.rstrip('/')}/{endpoint.lstrip('/')}",
         headers=get_headers(),
@@ -238,6 +242,93 @@ def parse_jobs_json(text: str) -> List[Dict[str, Any]]:
     return parsed
 
 
+def render_explanation_v2(explanation: Dict[str, Any]) -> None:
+    summary = explanation.get("recommendation_summary", "")
+    summary_points = explanation.get("summary_points", [])
+    strengths = explanation.get("strengths", [])
+    gaps = explanation.get("gaps", [])
+    recommendations = explanation.get("recommendations", [])
+
+    matched_required = explanation.get("matched_required_skills", [])
+    missing_required = explanation.get("missing_required_skills", [])
+    matched_preferred = explanation.get("matched_preferred_skills", [])
+    missing_preferred = explanation.get("missing_preferred_skills", [])
+    matched_domains = explanation.get("matched_domains", [])
+    missing_domains = explanation.get("missing_domains", [])
+
+    if summary:
+        st.subheader("Recommendation Summary")
+        st.info(summary)
+
+    if summary_points:
+        st.subheader("Key Match Signals")
+        signal_cols = st.columns(2)
+        for idx, point in enumerate(summary_points):
+            with signal_cols[idx % 2]:
+                st.success(point)
+
+    left, right = st.columns(2)
+
+    with left:
+        st.subheader("Strengths")
+        if strengths:
+            for item in strengths:
+                st.write(f"- {item}")
+        else:
+            st.caption("None")
+
+        st.subheader("Matched Required Skills")
+        if matched_required:
+            st.success(", ".join(matched_required))
+        else:
+            st.caption("None")
+
+        st.subheader("Matched Preferred Skills")
+        if matched_preferred:
+            st.success(", ".join(matched_preferred))
+        else:
+            st.caption("None")
+
+        st.subheader("Matched Domains")
+        if matched_domains:
+            st.success(", ".join(matched_domains))
+        else:
+            st.caption("None")
+
+    with right:
+        st.subheader("Gaps")
+        if gaps:
+            for gap in gaps:
+                st.error(gap)
+        else:
+            st.caption("None")
+
+        st.subheader("Missing Required Skills")
+        if missing_required:
+            st.error(", ".join(missing_required))
+        else:
+            st.caption("None")
+
+        st.subheader("Missing Preferred Skills")
+        if missing_preferred:
+            st.warning(", ".join(missing_preferred))
+        else:
+            st.caption("None")
+
+        st.subheader("Missing Domains")
+        if missing_domains:
+            st.warning(", ".join(missing_domains))
+        else:
+            st.caption("None")
+
+    st.subheader("Action Recommendations")
+    if recommendations:
+        for rec in recommendations:
+            st.info(rec)
+    else:
+        st.caption("None")
+
+
 def render_recommendations(result: Dict[str, Any]) -> None:
     count = result.get("count", 0)
     st.success(f"Found {count} recommendation(s).")
@@ -259,9 +350,27 @@ def render_recommendations(result: Dict[str, Any]) -> None:
             info_cols[3].metric("Location", item.get("location", ""))
             info_cols[4].metric("Workplace", item.get("workplace_type", ""))
 
+            full_result = item.get("full_result", {})
+            explanation = full_result.get("explanation", {})
+
+            summary = explanation.get("recommendation_summary", "")
+            strengths = explanation.get("strengths", [])
+            gaps = explanation.get("gaps", [])
+            summary_points = explanation.get("summary_points", [])
+
             matched = item.get("matched_required_skills", [])
             missing = item.get("missing_required_skills", [])
             recs = item.get("recommendations", [])
+
+            if summary:
+                st.info(summary)
+
+            if summary_points:
+                st.markdown("**Key Signals**")
+                signal_cols = st.columns(2)
+                for signal_idx, point in enumerate(summary_points):
+                    with signal_cols[signal_idx % 2]:
+                        st.success(point)
 
             left, right = st.columns(2)
 
@@ -272,22 +381,36 @@ def render_recommendations(result: Dict[str, Any]) -> None:
                 else:
                     st.caption("None")
 
+                st.markdown("**💪 Strengths**")
+                if strengths:
+                    for strength in strengths[:4]:
+                        st.write(f"- {strength}")
+                else:
+                    st.caption("None")
+
+            with right:
                 st.markdown("**🔴 Missing Required Skills**")
                 if missing:
                     st.error(", ".join(missing))
                 else:
                     st.caption("None")
 
-            with right:
-                st.markdown("**💡 Recommendations**")
-                if recs:
-                    for rec in recs:
-                        st.info(rec)
+                st.markdown("**⚠️ Gaps**")
+                if gaps:
+                    for gap in gaps[:4]:
+                        st.warning(gap)
                 else:
                     st.caption("None")
 
+            st.markdown("**💡 Action Recommendations**")
+            if recs:
+                for rec in recs:
+                    st.info(rec)
+            else:
+                st.caption("None")
+
             with st.expander("🔍 Full Match Details"):
-                st.json(item.get("full_result", {}))
+                st.json(full_result)
 
             st.divider()
 
@@ -436,6 +559,7 @@ st.write(
 
 tab1, tab2 = st.tabs(["Single Match", "Recommendations"])
 
+
 # -----------------------------
 # TAB 1 - SINGLE MATCH
 # -----------------------------
@@ -578,60 +702,15 @@ with tab1:
 
             st.subheader("Component Scores")
             comp = match_score.get("component_scores", {})
-            comp_cols = st.columns(5)
+            comp_cols = st.columns(6)
             comp_cols[0].metric("Required Skill", f"{comp.get('required_skill_score', 0) * 100:.1f}%")
             comp_cols[1].metric("Preferred Skill", f"{comp.get('preferred_skill_score', 0) * 100:.1f}%")
             comp_cols[2].metric("Experience", f"{comp.get('experience_score', 0) * 100:.1f}%")
             comp_cols[3].metric("Education", f"{comp.get('education_score', 0) * 100:.1f}%")
             comp_cols[4].metric("Seniority", f"{comp.get('seniority_score', 0) * 100:.1f}%")
+            comp_cols[5].metric("Domain", f"{comp.get('domain_score', 0) * 100:.1f}%")
 
-            left, right = st.columns(2)
-
-            with left:
-                st.subheader("Matched Required Skills")
-                matched_req = explanation.get("matched_required_skills", [])
-                if matched_req:
-                    st.write(", ".join(matched_req))
-                else:
-                    st.caption("None")
-
-                st.subheader("Missing Required Skills")
-                missing_req = explanation.get("missing_required_skills", [])
-                if missing_req:
-                    st.write(", ".join(missing_req))
-                else:
-                    st.caption("None")
-
-            with right:
-                st.subheader("Matched Preferred Skills")
-                matched_pref = explanation.get("matched_preferred_skills", [])
-                if matched_pref:
-                    st.write(", ".join(matched_pref))
-                else:
-                    st.caption("None")
-
-                st.subheader("Missing Preferred Skills")
-                missing_pref = explanation.get("missing_preferred_skills", [])
-                if missing_pref:
-                    st.write(", ".join(missing_pref))
-                else:
-                    st.caption("None")
-
-            st.subheader("Gaps")
-            gaps = explanation.get("gaps", [])
-            if gaps:
-                for gap in gaps:
-                    st.write(f"- {gap}")
-            else:
-                st.caption("None")
-
-            st.subheader("Recommendations")
-            recs = explanation.get("recommendations", [])
-            if recs:
-                for rec in recs:
-                    st.write(f"- {rec}")
-            else:
-                st.caption("None")
+            render_explanation_v2(explanation)
 
             with st.expander("See Full API Response"):
                 st.json(result)
