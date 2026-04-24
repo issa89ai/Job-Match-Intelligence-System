@@ -33,9 +33,9 @@ job-match-intelligence/
 │
 ├── src/
 │   ├── ingestion/        # Job collection pipelines
-│   ├── normalization/    # Data cleaning & structuring
+│   ├── normalization/    # Data cleaning \& structuring
 │   ├── extraction/       # Requirement extraction
-│   ├── candidate/        # Candidate parsing & features
+│   ├── candidate/        # Candidate parsing \& features
 │   ├── matching/         # Scoring + ranking engine
 │   ├── api/              # FastAPI service
 │   ├── utils/
@@ -58,7 +58,7 @@ Saves staging datasets
 
 📊 Result:
 
-~747 real job postings collected
+\~747 real job postings collected
 
 ✔ Phase 3 — Normalization Pipeline
 Job title normalization (family, function, seniority)
@@ -68,7 +68,7 @@ Deduplication using hashing
 
 📂 Output:
 
-data/curated/requirements/jobs_curated_*.csv
+data/curated/requirements/jobs\_curated\_\*.csv
 
 ✔ Phase 4 — Requirement Extraction
 Extracts:
@@ -80,7 +80,7 @@ Seniority inference
 
 📂 Output:
 
-data/curated/requirements_enriched/
+data/curated/requirements\_enriched/
 
 ✔ Phase 5 — Candidate Understanding
 Structured candidate profile schema
@@ -118,16 +118,16 @@ recommendations
 📊 Example Output:
 
 {
-  "score": 52.0,
-  "fit_label": "Partial Fit",
-  "gaps": [
-    "Missing required skills: enterprise, sales",
-    "Experience gap: candidate has 6 years vs required 10"
-  ],
-  "recommendations": [
-    "Develop required skills",
-    "Target roles with lower experience requirements"
-  ]
+"score": 52.0,
+"fit\_label": "Partial Fit",
+"gaps": \[
+"Missing required skills: enterprise, sales",
+"Experience gap: candidate has 6 years vs required 10"
+],
+"recommendations": \[
+"Develop required skills",
+"Target roles with lower experience requirements"
+]
 }
 
 ✔ Stage 7 — API Layer (FastAPI)
@@ -146,6 +146,7 @@ recommendations
 http://127.0.0.1:8000/docs
 
 🧠 Data Layers
+
 1. Raw Layer
 Original API responses
 Full traceability
@@ -159,23 +160,27 @@ Ready for intelligence processing
 Structured requirements from job descriptions
 
 ### Stage 8 — UI Layer (Streamlit)
-- Professional frontend for job-candidate matching
-- Job and candidate input forms
-- API-connected scoring workflow
-- Visual display of score, filters, gaps, and recommendations
-- Demo-ready interface
+
+* Professional frontend for job-candidate matching
+* Job and candidate input forms
+* API-connected scoring workflow
+* Visual display of score, filters, gaps, and recommendations
+* Demo-ready interface
 
 ## 📊 Evaluation (Stage 9)
 
 ### Extraction Performance
-- Precision: 0.75
-- Recall: 0.625
-- F1 Score: 0.6785
+
+* Precision: 0.75
+* Recall: 0.625
+* F1 Score: 0.6785
 
 ### Matching Performance
-- Accuracy: 66.7%
+
+* Accuracy: 66.7%
 
 ### Interpretation
+
 The system demonstrates solid baseline performance. Extraction shows higher precision than recall, indicating accurate but slightly conservative skill detection. Matching results align reasonably well with human judgment.
 
 Future improvements include NLP-based extraction and data-driven scoring models.
@@ -204,6 +209,7 @@ Explainability (no black-box logic)
 Extensibility (multi-source ready)
 
 
+
 📈 Future Improvements
 Semantic matching (Sentence Transformers)
 Embedding-based similarity
@@ -219,4 +225,5 @@ Most of the system complexity lies in data cleaning, normalization, and structur
 
 Ahmad
 Master’s Student — Computer Science (Data Science)
-Focused on building real-world ML systems, data pipelines, and AI applications
+Focused on building real-world ML systems, data pipelines, and AI applications.
+
