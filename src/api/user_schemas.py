@@ -54,12 +54,12 @@ class UserMeResponse(BaseModel):
 
 
 class SavedProfileRequest(BaseModel):
-    candidate_id: str = Field(..., min_length=1, max_length=100)
-    full_name: str = Field(..., min_length=2, max_length=100)
-    current_title: str = Field(..., min_length=1, max_length=100)
-    location: str = Field(..., min_length=1, max_length=100)
+    candidate_id: str = Field(default="", max_length=100)
+    full_name: str = Field(default="", max_length=100)
+    current_title: str = Field(default="", max_length=100)
+    location: str = Field(default="", max_length=100)
     education: Optional[str] = None
-    years_experience: int = Field(..., ge=0, le=60)
+    years_experience: int = Field(default=0, ge=0, le=60)
     skills: List[str] = Field(default_factory=list)
     tools: List[str] = Field(default_factory=list)
     domains: List[str] = Field(default_factory=list)
@@ -68,13 +68,20 @@ class SavedProfileRequest(BaseModel):
     seniority: Optional[str] = None
     summary: Optional[str] = None
 
-    @field_validator("candidate_id", "full_name", "current_title", "location")
+    @field_validator("candidate_id", "full_name", "current_title", "location", mode="before")
     @classmethod
-    def strip_required_text(cls, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise ValueError("This field cannot be empty.")
-        return value
+    def strip_optional_text(cls, value) -> str:
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    @field_validator("education", "seniority", "summary", mode="before")
+    @classmethod
+    def strip_optional_nullable_text(cls, value):
+        if value is None:
+            return None
+        value = str(value).strip()
+        return value if value else None
 
 
 class SavedProfileResponse(BaseModel):
@@ -101,6 +108,14 @@ class PreferenceRequest(BaseModel):
     preferred_domains: List[str] = Field(default_factory=list)
     preferred_seniority: Optional[str] = None
     min_score: int = Field(default=50, ge=0, le=100)
+
+    @field_validator("preferred_seniority", mode="before")
+    @classmethod
+    def strip_optional_preferred_seniority(cls, value):
+        if value is None:
+            return None
+        value = str(value).strip()
+        return value if value else None
 
 
 class PreferenceResponse(BaseModel):
