@@ -1,28 +1,35 @@
+# General project metadata
 project:
-  name: "job-match-intelligence"
-  environment: "dev"
-  pipeline_version: "1.0.0"
+  name: "job-match-intelligence"   # Project name
+  environment: "dev"               # Current environment: dev/test/prod
+  pipeline_version: "1.0.0"        # Version of the pipeline configuration
 
+
+# Storage locations for each pipeline layer
 storage:
-  raw_jobs_dir: "data/raw/jobs"
-  staging_jobs_dir: "data/staging/jobs"
-  curated_requirements_dir: "data/curated/requirements"
-  curated_profiles_dir: "data/curated/profiles"
-  curated_matches_dir: "data/curated/matches"
-  evaluation_dir: "data/evaluation"
+  raw_jobs_dir: "data/raw/jobs"                       # Raw API responses
+  staging_jobs_dir: "data/staging/jobs"              # Unified but not fully cleaned jobs
+  curated_requirements_dir: "data/curated/requirements"  # Normalized job requirements
+  curated_profiles_dir: "data/curated/profiles"      # Candidate profile outputs
+  curated_matches_dir: "data/curated/matches"        # Match results
+  evaluation_dir: "data/evaluation"                  # Evaluation outputs
 
+
+# Settings for API job collection
 ingestion:
-  request_timeout_seconds: 20
-  max_retries: 2
-  user_agent: "job-match-intelligence/1.0"
+  request_timeout_seconds: 20       # Max wait time for external API response
+  max_retries: 2                    # Retry failed requests twice
+  user_agent: "job-match-intelligence/1.0"  # Identifier sent with requests
 
+
+# External job sources
 sources:
   greenhouse:
-    enabled: true
+    enabled: true                   # Greenhouse ingestion is active
     boards:
-      - "stripe"
-      - "airbnb"
+      - "stripe"                    # Collect Stripe jobs
+      - "airbnb"                    # Collect Airbnb jobs
 
   lever:
-    enabled: false
-    companies: []
+    enabled: false                  # Lever ingestion is currently disabled
+    companies: []                   # No Lever companies configured

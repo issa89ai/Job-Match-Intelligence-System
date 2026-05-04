@@ -1,4 +1,9 @@
+# Skill dictionary used by the extraction and matching pipeline.
+# Left side = normalized skill name used internally by the system.
+# List items = aliases that may appear in job descriptions or profiles.
+
 skills:
+
   python:
     - python
 

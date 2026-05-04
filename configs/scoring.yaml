@@ -1,23 +1,34 @@
+# Version of the scoring configuration.
+# Useful if scoring rules change later.
 scoring_version: "1.0.0"
 
+
+# Weight of each factor in the final score.
+# Total should ideally add up to 1.00.
 weights:
-  required_skill_coverage: 0.35
-  preferred_skill_coverage: 0.15
-  experience_alignment: 0.15
-  tool_alignment: 0.10
-  education_alignment: 0.10
-  domain_alignment: 0.10
-  semantic_alignment: 0.05
+  required_skill_coverage: 0.35     # Importance of required skills
+  preferred_skill_coverage: 0.15    # Importance of preferred skills
+  experience_alignment: 0.15        # Importance of years of experience
+  tool_alignment: 0.10              # Importance of tools
+  education_alignment: 0.10         # Importance of education
+  domain_alignment: 0.10            # Importance of domain match
+  semantic_alignment: 0.05          # Future semantic/embedding similarity
 
+
+# Score penalties for important gaps.
 penalties:
-  missing_critical_required_skill: 0.10
-  severe_experience_gap: 0.10
-  missing_required_degree: 0.15
+  missing_critical_required_skill: 0.10   # Penalty for missing important required skills
+  severe_experience_gap: 0.10             # Penalty for large experience gap
+  missing_required_degree: 0.15           # Penalty for missing required education
 
+
+# Score caps limit the maximum score in serious failure cases.
 caps:
   fail_hard_filter_max_score: 49.0
   missing_multiple_critical_skills_max_score: 59.0
 
+
+# Final label ranges.
 fit_labels:
   strong_fit:
     min_score: 85

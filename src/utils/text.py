@@ -8,8 +8,22 @@ from typing import Iterable
 import pandas as pd
 
 
+# Matches one or more whitespace characters:
+# spaces, tabs, new lines, etc.
 WHITESPACE_PATTERN = re.compile(r"\s+")
+
+
+# Removes punctuation/symbols, but keeps:
+# + for C++
+# # for C#
+# . for tools like .NET
 NON_WORD_KEEP_PLUS_HASH_DOT_PATTERN = re.compile(r"[^\w\s+#.]")
+
+
+# Detects phrases like:
+# "3 years experience"
+# "5+ years of experience"
+# "2 yrs experience"
 YEAR_EXPERIENCE_PATTERN = re.compile(
     r"(?P<years>\d+)\+?\s*(?:years|year|yrs|yr)\s+(?:of\s+)?experience",
     re.IGNORECASE,
@@ -22,6 +36,7 @@ def is_missing(value: object) -> bool:
     """
     if value is None:
         return True
+
     try:
         return pd.isna(value)
     except Exception:
@@ -36,8 +51,14 @@ def clean_text(text: object) -> str:
         return ""
 
     text = str(text)
+
+    # Replace line breaks and tabs with spaces
     text = text.replace("\r", " ").replace("\n", " ").replace("\t", " ")
+
+    # Collapse multiple spaces into one space
     text = WHITESPACE_PATTERN.sub(" ", text)
+
+    # Remove leading/trailing spaces
     return text.strip()
 
 
@@ -47,8 +68,13 @@ def normalize_text_basic(text: object) -> str:
     Useful for NLP matching.
     """
     text = clean_text(text).lower()
+
+    # Remove most punctuation but keep useful technical symbols
     text = NON_WORD_KEEP_PLUS_HASH_DOT_PATTERN.sub(" ", text)
+
+    # Normalize spacing again after punctuation removal
     text = WHITESPACE_PATTERN.sub(" ", text)
+
     return text.strip()
 
 
@@ -61,6 +87,7 @@ def normalize_location_text(location: object) -> str:
 
     location_text = clean_text(location)
 
+    # Manual location fixes for common formats
     replacements = {
         "remote - united states": "remote, united states",
         "remote - canada": "remote, canada",
@@ -68,7 +95,10 @@ def normalize_location_text(location: object) -> str:
         "san francisco ca": "san francisco, ca",
     }
 
+    # Lowercase and remove dots for matching replacement keys
     key = location_text.lower().replace(".", "")
+
+    # Return normalized value if found, otherwise original cleaned location
     return replacements.get(key, location_text)
 
 
@@ -77,6 +107,8 @@ def stable_hash(text: object) -> str:
     Compute a stable SHA256 hash for text.
     """
     normalized = clean_text(text)
+
+    # SHA256 creates a fixed fingerprint for the text
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
@@ -87,9 +119,11 @@ def safe_json_string(value: object) -> str:
     if is_missing(value):
         return "{}"
 
+    # For lists/dicts, convert to proper JSON
     if isinstance(value, (dict, list)):
         return json.dumps(value, ensure_ascii=False, sort_keys=True)
 
+    # For other values, convert to plain string
     return str(value)
 
 
@@ -114,7 +148,9 @@ def extract_min_years_experience(text: object) -> int | None:
     Returns the first detected integer if found.
     """
     normalized = clean_text(text)
+
     match = YEAR_EXPERIENCE_PATTERN.search(normalized)
+
     if not match:
         return None
 
