@@ -6,6 +6,8 @@ from typing import Any
 from src.utils.text import clean_text, normalize_text_basic
 
 
+# Rules used to detect seniority from job titles.
+# Each seniority level has regex patterns.
 SENIORITY_PATTERNS = {
     "intern": [
         r"\bintern\b",
@@ -38,6 +40,8 @@ SENIORITY_PATTERNS = {
     ],
 }
 
+
+# Rules used to map raw job titles to normalized titles and job families.
 TITLE_RULES = [
     {
         "normalized_title": "data_scientist",
@@ -105,13 +109,17 @@ def infer_seniority_level(title_raw: Any) -> str:
     """
     Infer a coarse seniority level from a raw title.
     """
+
+    # Clean title and normalize case/punctuation.
     text = normalize_text_basic(title_raw)
 
+    # Check each seniority group against title text.
     for seniority, patterns in SENIORITY_PATTERNS.items():
         for pattern in patterns:
             if re.search(pattern, text, flags=re.IGNORECASE):
                 return seniority
 
+    # Return empty string if no seniority signal is found.
     return ""
 
 
@@ -120,16 +128,22 @@ def normalize_title(title_raw: Any) -> tuple[str, str]:
     Normalize job title into a canonical form and infer job family.
     Returns (title_normalized, job_family).
     """
+
+    # Normalize title text before applying regex rules.
     text = normalize_text_basic(title_raw)
 
+    # Try to match known title rules.
     for rule in TITLE_RULES:
         for pattern in rule["patterns"]:
             if re.search(pattern, text, flags=re.IGNORECASE):
                 return rule["normalized_title"], rule["job_family"]
 
-    # fallback heuristic
+    # Fallback:
+    # If no rule matches, convert the cleaned raw title into snake_case.
     cleaned = clean_text(title_raw).lower().strip()
     fallback = re.sub(r"[^a-z0-9]+", "_", cleaned).strip("_")
+
+    # Unknown family because no rule matched.
     return fallback, ""
 
 
@@ -137,14 +151,23 @@ def infer_job_function(title_normalized: str, job_family: str) -> str:
     """
     Infer broader functional area.
     """
+
+    # Data-related roles.
     if job_family in {"data_science", "machine_learning", "analytics", "data_engineering"}:
         return "data"
+
+    # Software engineering roles.
     if job_family in {"software_engineering"}:
         return "engineering"
+
+    # Sales roles.
     if job_family in {"sales"}:
         return "go_to_market"
+
+    # Product roles.
     if job_family in {"product"}:
         return "product"
+
     return ""
 
 
@@ -152,8 +175,14 @@ def normalize_title_record(title_raw: Any) -> dict[str, str]:
     """
     Normalize all title-related fields at once.
     """
+
+    # Normalize title and infer family.
     title_normalized, job_family = normalize_title(title_raw)
+
+    # Infer seniority from raw title.
     seniority_level = infer_seniority_level(title_raw)
+
+    # Infer broad function from job family.
     job_function = infer_job_function(title_normalized, job_family)
 
     return {

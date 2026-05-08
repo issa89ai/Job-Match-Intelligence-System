@@ -18,7 +18,6 @@ from src.utils.io import (
     write_json,
 )
 from src.utils.logger import add_file_handler, get_logger
-
 from src.utils.text import clean_text, normalize_location_text, safe_json_string, stable_hash
 
 
@@ -66,7 +65,12 @@ class IngestionPipeline:
         file_str = now.strftime("%Y-%m-%dT%H-%M-%S")
         return iso_str, file_str
 
-    def _fetch_with_retries(self, fetch_fn, source_type: str, source_name: str) -> list[dict[str, Any]]:
+    def _fetch_with_retries(
+        self,
+        fetch_fn,
+        source_type: str,
+        source_name: str,
+    ) -> list[dict[str, Any]]:
         last_error: Exception | None = None
 
         for attempt in range(1, self.max_retries + 2):
@@ -78,9 +82,11 @@ class IngestionPipeline:
                     attempt,
                 )
                 return fetch_fn(source_name)
+
             except requests.HTTPError as exc:
                 last_error = exc
                 status_code = exc.response.status_code if exc.response is not None else "unknown"
+
                 logger.warning(
                     "HTTP error for source_type='%s' source_name='%s' status=%s attempt=%s",
                     source_type,
@@ -88,10 +94,13 @@ class IngestionPipeline:
                     status_code,
                     attempt,
                 )
+
                 if status_code == 404:
                     break
+
             except Exception as exc:
                 last_error = exc
+
                 logger.warning(
                     "Error for source_type='%s' source_name='%s' attempt=%s error='%s'",
                     source_type,
@@ -106,6 +115,7 @@ class IngestionPipeline:
             source_name,
             str(last_error) if last_error else "unknown",
         )
+
         return []
 
     def _save_raw_snapshot(
@@ -120,12 +130,18 @@ class IngestionPipeline:
             extension="json",
             timestamp_str=timestamp_str,
         )
+
         output_path = self.raw_jobs_dir / filename
         write_json(records, output_path)
+
         logger.info("Saved raw snapshot: %s", output_path)
+
         return str(output_path)
 
-    def _postprocess_staging_records(self, records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _postprocess_staging_records(
+        self,
+        records: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         processed: list[dict[str, Any]] = []
 
         for record in records:
@@ -170,16 +186,22 @@ class IngestionPipeline:
         all_records: list[dict[str, Any]] = []
         run_summary: list[dict[str, Any]] = []
 
-        # Greenhouse
         if self.greenhouse_cfg.get("enabled", False):
             boards = self.greenhouse_cfg.get("boards", [])
+
             for board in boards:
                 raw_jobs = self._fetch_with_retries(
                     self.greenhouse_client.fetch_jobs,
                     source_type="greenhouse",
                     source_name=board,
                 )
-                raw_path = self._save_raw_snapshot("greenhouse", board, raw_jobs, timestamp_str)
+
+                raw_path = self._save_raw_snapshot(
+                    "greenhouse",
+                    board,
+                    raw_jobs,
+                    timestamp_str,
+                )
 
                 normalized = self.greenhouse_client.normalize_jobs(
                     jobs=raw_jobs,
@@ -187,6 +209,7 @@ class IngestionPipeline:
                     pipeline_version=self.pipeline_version,
                     ingested_at=ingested_at,
                 )
+
                 normalized = self._postprocess_staging_records(normalized)
                 all_records.extend(normalized)
 
@@ -200,16 +223,22 @@ class IngestionPipeline:
                     }
                 )
 
-        # Lever
         if self.lever_cfg.get("enabled", False):
             companies = self.lever_cfg.get("companies", [])
+
             for company in companies:
                 raw_jobs = self._fetch_with_retries(
                     self.lever_client.fetch_jobs,
                     source_type="lever",
                     source_name=company,
                 )
-                raw_path = self._save_raw_snapshot("lever", company, raw_jobs, timestamp_str)
+
+                raw_path = self._save_raw_snapshot(
+                    "lever",
+                    company,
+                    raw_jobs,
+                    timestamp_str,
+                )
 
                 normalized = self.lever_client.normalize_jobs(
                     jobs=raw_jobs,
@@ -217,6 +246,7 @@ class IngestionPipeline:
                     pipeline_version=self.pipeline_version,
                     ingested_at=ingested_at,
                 )
+
                 normalized = self._postprocess_staging_records(normalized)
                 all_records.extend(normalized)
 
@@ -238,11 +268,13 @@ class IngestionPipeline:
             extension="csv",
             timestamp_str=timestamp_str,
         )
+
         json_filename = timestamped_filename(
             prefix="jobs_staging",
             extension="json",
             timestamp_str=timestamp_str,
         )
+
         summary_filename = timestamped_filename(
             prefix="ingestion_run_summary",
             extension="json",
@@ -276,7 +308,9 @@ class IngestionPipeline:
                 "location_normalized",
                 "source_url",
             ]
+
             preview_cols = [c for c in preview_cols if c in staging_df.columns]
+
             print("\nSample rows:")
             print(staging_df[preview_cols].head(10).to_string(index=False))
 
