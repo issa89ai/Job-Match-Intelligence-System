@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 
+# Seniority ranking hierarchy.
 SENIORITY_ORDER = {
     "intern": 1,
     "entry": 2,
@@ -13,6 +14,7 @@ SENIORITY_ORDER = {
 }
 
 
+# Education ranking hierarchy.
 EDUCATION_ORDER = {
     "high_school": 1,
     "associate": 2,
@@ -23,48 +25,84 @@ EDUCATION_ORDER = {
 
 
 def _first_present(*values: Any) -> Any:
+    """
+    Return first non-empty value.
+    """
+
     for value in values:
         if value is not None and value != "":
             return value
+
     return None
 
 
 def _to_set(values) -> set:
+    """
+    Normalize list into lowercase unique set.
+    """
+
     if not values:
         return set()
-    return {str(v).strip().lower() for v in values if str(v).strip()}
+
+    return {
+        str(v).strip().lower()
+        for v in values
+        if str(v).strip()
+    }
 
 
 def _normalize_text(value: Any) -> str:
+    """
+    Normalize text safely.
+    """
+
     return str(value or "").strip().lower()
 
 
-def score_required_skills(job_required_skills: List[str], candidate_skills: List[str]) -> float:
+def score_required_skills(
+    job_required_skills: List[str],
+    candidate_skills: List[str],
+) -> float:
+    """
+    Score required skill coverage.
+    """
+
     required = _to_set(job_required_skills)
     candidate = _to_set(candidate_skills)
 
+    # If no required skills exist, perfect score.
     if not required:
         return 1.0
 
     matched_count = len(required & candidate)
     total_required = len(required)
 
+    # Basic coverage ratio.
     base_score = matched_count / total_required
 
-    # Stronger penalty when required skills are missing
+    # Severe penalty if candidate matches none.
     if matched_count == 0:
         return 0.0
 
+    # Additional penalty if coverage is weak.
     if base_score < 0.5:
         return base_score * 0.75
 
     return base_score
 
 
-def score_preferred_skills(job_preferred_skills: List[str], candidate_skills: List[str]) -> float:
+def score_preferred_skills(
+    job_preferred_skills: List[str],
+    candidate_skills: List[str],
+) -> float:
+    """
+    Score preferred skill coverage.
+    """
+
     preferred = _to_set(job_preferred_skills)
     candidate = _to_set(candidate_skills)
 
+    # If no preferred skills exist, perfect score.
     if not preferred:
         return 1.0
 
@@ -72,38 +110,53 @@ def score_preferred_skills(job_preferred_skills: List[str], candidate_skills: Li
 
 
 def score_experience(job_years_required, candidate_years) -> float:
+    """
+    Score experience alignment.
+    """
+
+    # No requirement means perfect score.
     if job_years_required is None:
         return 1.0
 
+    # Missing candidate experience fails.
     if candidate_years is None:
         return 0.0
 
     try:
         job_years_required = float(job_years_required)
         candidate_years = float(candidate_years)
+
     except Exception:
         return 0.0
 
     if job_years_required <= 0:
         return 1.0
 
+    # Candidate satisfies requirement.
     if candidate_years >= job_years_required:
         return 1.0
 
+    # Candidate under requirement.
     gap = job_years_required - candidate_years
     ratio = candidate_years / job_years_required
 
-    # Small gap is acceptable, large gap is penalized harder
+    # Small gap tolerated.
     if gap <= 1:
         return max(0.75, ratio)
 
+    # Medium gap penalized moderately.
     if gap <= 3:
         return max(0.50, ratio * 0.9)
 
+    # Large gap heavily penalized.
     return max(0.0, ratio * 0.75)
 
 
 def score_education(job_education, candidate_education) -> float:
+    """
+    Score education alignment.
+    """
+
     if not job_education:
         return 1.0
 
@@ -113,17 +166,25 @@ def score_education(job_education, candidate_education) -> float:
     jr = EDUCATION_ORDER.get(_normalize_text(job_education))
     cr = EDUCATION_ORDER.get(_normalize_text(candidate_education))
 
+    # Unknown values → partial uncertainty score.
     if jr is None or cr is None:
         return 0.5
 
+    # Candidate satisfies or exceeds requirement.
     if cr >= jr:
         return 1.0
 
+    # Penalize education gap.
     diff = jr - cr
+
     return max(0.0, 1.0 - 0.35 * diff)
 
 
 def score_seniority(job_seniority, candidate_seniority) -> float:
+    """
+    Score seniority alignment.
+    """
+
     if not job_seniority:
         return 1.0
 
@@ -136,14 +197,24 @@ def score_seniority(job_seniority, candidate_seniority) -> float:
     if jr is None or cr is None:
         return 0.5
 
+    # Candidate meets/exceeds required seniority.
     if cr >= jr:
         return 1.0
 
+    # Penalize lower seniority.
     diff = jr - cr
+
     return max(0.0, 1.0 - 0.4 * diff)
 
 
-def score_domain_alignment(job_domains: List[str], candidate_domains: List[str]) -> float:
+def score_domain_alignment(
+    job_domains: List[str],
+    candidate_domains: List[str],
+) -> float:
+    """
+    Score industry/domain overlap.
+    """
+
     job_domain_set = _to_set(job_domains)
     candidate_domain_set = _to_set(candidate_domains)
 
@@ -156,7 +227,15 @@ def score_domain_alignment(job_domains: List[str], candidate_domains: List[str])
     return len(job_domain_set & candidate_domain_set) / len(job_domain_set)
 
 
-def compute_match_score(job_features: Dict, candidate_features: Dict) -> Dict:
+def compute_match_score(
+    job_features: Dict,
+    candidate_features: Dict,
+) -> Dict:
+    """
+    Compute overall weighted candidate-job match score.
+    """
+
+    # Support both extracted and manual job fields.
     job_years_required = _first_present(
         job_features.get("years_experience_required"),
         job_features.get("years_experience_extracted"),
@@ -172,6 +251,7 @@ def compute_match_score(job_features: Dict, candidate_features: Dict) -> Dict:
         job_features.get("seniority_inferred"),
     )
 
+    # Compute component scores.
     required_skill_score = score_required_skills(
         job_features.get("required_skills", []),
         candidate_features.get("skills", []),
@@ -202,6 +282,7 @@ def compute_match_score(job_features: Dict, candidate_features: Dict) -> Dict:
         candidate_features.get("domains", []),
     )
 
+    # Relative importance of each component.
     weights = {
         "required_skill_score": 0.38,
         "preferred_skill_score": 0.12,
@@ -211,6 +292,7 @@ def compute_match_score(job_features: Dict, candidate_features: Dict) -> Dict:
         "domain_score": 0.10,
     }
 
+    # Weighted average score.
     weighted_score = (
         required_skill_score * weights["required_skill_score"]
         + preferred_skill_score * weights["preferred_skill_score"]
@@ -220,26 +302,35 @@ def compute_match_score(job_features: Dict, candidate_features: Dict) -> Dict:
         + domain_score * weights["domain_score"]
     )
 
+    # Convert to percentage.
     final_score = round(weighted_score * 100, 2)
 
-    # Extra penalty if required skills are very weak
+    # Extra penalty if required skill coverage is weak.
     if required_skill_score == 0:
         final_score = min(final_score, 45.0)
+
     elif required_skill_score < 0.5:
         final_score = min(final_score, 60.0)
 
+    # Convert numeric score into human-readable label.
     if final_score >= 85:
         fit_label = "Strong Fit"
+
     elif final_score >= 70:
         fit_label = "Good Fit"
+
     elif final_score >= 50:
         fit_label = "Partial Fit"
+
     else:
         fit_label = "Weak Fit"
 
     return {
         "score": final_score,
+
         "fit_label": fit_label,
+
+        # Individual component scores for explainability.
         "component_scores": {
             "required_skill_score": round(required_skill_score, 4),
             "preferred_skill_score": round(preferred_skill_score, 4),
@@ -248,5 +339,7 @@ def compute_match_score(job_features: Dict, candidate_features: Dict) -> Dict:
             "seniority_score": round(seniority_score, 4),
             "domain_score": round(domain_score, 4),
         },
+
+        # Store weights for transparency/debugging.
         "weights": weights,
     }
