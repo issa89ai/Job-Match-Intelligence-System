@@ -797,8 +797,6 @@ with page[4]:
                     if apply_link:
                         st.link_button("Apply on Original Website", apply_link)
 
-                    with st.expander("Full Match Details"):
-                        st.json(item.get("full_result", item))
 
 
 # ============================================================
