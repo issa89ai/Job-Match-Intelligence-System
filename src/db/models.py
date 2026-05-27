@@ -6,6 +6,8 @@ from __future__ import annotations
 # =========================================================
 
 # Database column/data types.
+import uuid
+
 from sqlalchemy import (
     Column,
     DateTime,
@@ -77,20 +79,19 @@ class User(Base):
     # Relationships
     # ----------------------------------------
 
-    # One-to-one relationship:
-    # User → CandidateProfileRecord
-    profile = relationship(
+    # One-to-many relationship:
+    # User → CandidateProfileRecord (multiple profiles per user)
+    profiles = relationship(
 
         "CandidateProfileRecord",
 
         # Reverse relationship name.
         back_populates="user",
 
-        # One user has one profile.
-        uselist=False,
+        # One user can have many profiles.
+        uselist=True,
 
-        # Delete profile automatically
-        # if user is deleted.
+        # Delete all profiles automatically if user is deleted.
         cascade="all, delete-orphan",
     )
 
@@ -127,23 +128,28 @@ class CandidateProfileRecord(Base):
     )
 
     # Foreign key linking to users table.
+    # No unique=True — one user can have many profiles.
     user_id = Column(
-
         Integer,
-
         ForeignKey("users.id"),
-
-        # One profile per user.
-        unique=True,
-
         nullable=False,
     )
 
-    # Candidate profile fields.
+    # System-generated UUID — never editable by the user.
     candidate_id = Column(
-        String(255),
+        String(36),
         nullable=False,
-        default="candidate_001",
+        default=lambda: str(uuid.uuid4()),
+        unique=True,
+        index=True,
+    )
+
+    # Human-readable profile label chosen by the user,
+    # e.g. "Data Scientist Profile" or "ML Engineer Profile".
+    profile_name = Column(
+        String(100),
+        nullable=False,
+        default="My Profile",
     )
 
     full_name = Column(
@@ -232,7 +238,7 @@ class CandidateProfileRecord(Base):
     # CandidateProfileRecord → User
     user = relationship(
         "User",
-        back_populates="profile",
+        back_populates="profiles",
     )
 
 

@@ -38,9 +38,11 @@ def init_state() -> None:
         "user_email": "",
         "full_name": "",
         "is_logged_in": False,
-        "profile_loaded": False,
+        "profiles_loaded": False,
         "preferences_loaded": False,
-        "saved_profile": {},
+        "all_profiles": [],          # list of ProfileListItem dicts
+        "active_profile_id": None,   # candidate_id of selected profile
+        "saved_profile": {},         # full profile data for active profile
         "saved_preferences": {},
         "jobs": [],
         "jobs_dataset_path": "",
@@ -70,9 +72,10 @@ def api_get(endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str,
     return response.json()
 
 
-def api_post(endpoint: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+def api_post(endpoint: str, payload: Dict[str, Any], method: str = "POST") -> Dict[str, Any]:
     url = f"{st.session_state.api_url.rstrip('/')}/{endpoint.lstrip('/')}"
-    response = requests.post(url, headers=get_headers(), json=payload, timeout=90)
+    fn = requests.put if method == "PUT" else requests.post
+    response = fn(url, headers=get_headers(), json=payload, timeout=90)
     response.raise_for_status()
     return response.json()
 
@@ -93,8 +96,10 @@ def logout() -> None:
     st.session_state.user_email = ""
     st.session_state.full_name = ""
     st.session_state.is_logged_in = False
-    st.session_state.profile_loaded = False
+    st.session_state.profiles_loaded = False
     st.session_state.preferences_loaded = False
+    st.session_state.all_profiles = []
+    st.session_state.active_profile_id = None
     st.session_state.saved_profile = {}
     st.session_state.saved_preferences = {}
     st.session_state.last_match_result = None
@@ -103,17 +108,27 @@ def logout() -> None:
     st.rerun()
 
 
-def load_profile_silently() -> None:
-    if not st.session_state.is_logged_in or st.session_state.profile_loaded:
+def load_profiles_silently() -> None:
+    """Load all profiles for the current user on first login."""
+    if not st.session_state.is_logged_in or st.session_state.profiles_loaded:
         return
 
     try:
-        profile = api_get("/profile")
-        st.session_state.saved_profile = profile
+        result = api_get("/profiles")
+        st.session_state.all_profiles = result.get("profiles", [])
+        # Auto-select first profile if available
+        if st.session_state.all_profiles and not st.session_state.active_profile_id:
+            first_id = st.session_state.all_profiles[0]["candidate_id"]
+            st.session_state.active_profile_id = first_id
+            try:
+                profile = api_get(f"/profiles/{first_id}")
+                st.session_state.saved_profile = profile
+            except Exception:
+                st.session_state.saved_profile = {}
     except Exception:
-        st.session_state.saved_profile = {}
+        st.session_state.all_profiles = []
 
-    st.session_state.profile_loaded = True
+    st.session_state.profiles_loaded = True
 
 
 def load_preferences_silently() -> None:
@@ -139,7 +154,7 @@ def preference_value(key: str, default: Any = "") -> Any:
 
 def build_candidate_payload() -> Dict[str, Any]:
     return {
-        "candidate_id": st.session_state.get("candidate_id", "candidate_001"),
+        "candidate_id": st.session_state.get("active_profile_id") or "candidate_001",
         "full_name": st.session_state.get("candidate_full_name", ""),
         "current_title": st.session_state.get("candidate_current_title", ""),
         "location": st.session_state.get("candidate_location", ""),
@@ -299,10 +314,12 @@ with st.sidebar:
         auth_tab = st.radio("Account", ["Login", "Register"])
 
         if auth_tab == "Login":
-            email = st.text_input("Email", key="login_email")
-            password = st.text_input("Password", type="password", key="login_password")
+            with st.form("login_form"):
+                email = st.text_input("Email", key="login_email")
+                password = st.text_input("Password", type="password", key="login_password")
+                submitted = st.form_submit_button("Login", use_container_width=True)
 
-            if st.button("Login", use_container_width=True):
+            if submitted:
                 try:
                     result = api_post(
                         "/auth/login",
@@ -320,11 +337,13 @@ with st.sidebar:
                     show_api_error(e)
 
         else:
-            full_name = st.text_input("Full Name", key="register_full_name")
-            email = st.text_input("Email", key="register_email")
-            password = st.text_input("Password", type="password", key="register_password")
+            with st.form("register_form"):
+                full_name = st.text_input("Full Name", key="register_full_name")
+                email = st.text_input("Email", key="register_email")
+                password = st.text_input("Password", type="password", key="register_password")
+                submitted = st.form_submit_button("Register", use_container_width=True)
 
-            if st.button("Register", use_container_width=True):
+            if submitted:
                 try:
                     result = api_post(
                         "/auth/register",
@@ -355,7 +374,7 @@ with st.sidebar:
 
 
 if st.session_state.is_logged_in:
-    load_profile_silently()
+    load_profiles_silently()
     load_preferences_silently()
 
 
@@ -385,13 +404,100 @@ page = st.tabs(
 with page[0]:
     st.header("Candidate Profile")
 
+    # ── Profile selector bar ──────────────────────────────
+    profiles = st.session_state.all_profiles
+    active_id = st.session_state.active_profile_id
+
+    sel_col, new_col, del_col = st.columns([4, 1, 1])
+
+    with sel_col:
+        if profiles:
+            profile_labels = [
+                f"{p['profile_name']}  ({p['current_title'] or 'No title'})"
+                for p in profiles
+            ]
+            current_index = next(
+                (i for i, p in enumerate(profiles) if p["candidate_id"] == active_id),
+                0,
+            )
+            selected_index = st.selectbox(
+                "Active Profile",
+                range(len(profile_labels)),
+                format_func=lambda i: profile_labels[i],
+                index=current_index,
+                key="profile_selector",
+            )
+            selected_id = profiles[selected_index]["candidate_id"]
+
+            # Switch profile if user picks a different one
+            if selected_id != active_id:
+                try:
+                    profile = api_get(f"/profiles/{selected_id}")
+                    st.session_state.saved_profile = profile
+                    st.session_state.active_profile_id = selected_id
+                    st.rerun()
+                except Exception as e:
+                    show_api_error(e)
+        else:
+            st.info("No profiles yet. Click **New Profile** to create one.")
+
+    with new_col:
+        st.write("")  # vertical alignment
+        st.write("")
+        if st.button("＋ New", use_container_width=True):
+            try:
+                new_profile = api_post("/profiles", {
+                    "profile_name": f"Profile {len(profiles) + 1}",
+                    "full_name": st.session_state.full_name,
+                    "current_title": "",
+                    "location": "",
+                    "years_experience": 0,
+                    "skills": [], "tools": [], "domains": [],
+                    "certifications": [], "projects": [],
+                })
+                st.session_state.active_profile_id = new_profile["candidate_id"]
+                st.session_state.saved_profile = new_profile
+                st.session_state.profiles_loaded = False   # force refresh
+                st.success("New profile created.")
+                st.rerun()
+            except Exception as e:
+                show_api_error(e)
+
+    with del_col:
+        st.write("")
+        st.write("")
+        if active_id and len(profiles) > 0:
+            if st.button("🗑 Delete", use_container_width=True):
+                try:
+                    api_get(f"/profiles/{active_id}")  # confirm exists
+                    requests.delete(
+                        f"{st.session_state.api_url}/profiles/{active_id}",
+                        headers=get_headers(),
+                        timeout=30,
+                    )
+                    st.session_state.active_profile_id = None
+                    st.session_state.saved_profile = {}
+                    st.session_state.profiles_loaded = False
+                    st.success("Profile deleted.")
+                    st.rerun()
+                except Exception as e:
+                    show_api_error(e)
+
+    # ── Show system-assigned Candidate ID (read-only) ─────
+    if active_id:
+        st.caption(f"🔑 Candidate ID (system-assigned): `{active_id}`")
+
+    st.divider()
+
+    # ── Profile form ──────────────────────────────────────
     col1, col2 = st.columns(2)
 
     with col1:
         st.text_input(
-            "Candidate ID",
-            value=profile_value("candidate_id", "candidate_001"),
-            key="candidate_id",
+            "Profile Name",
+            value=profile_value("profile_name", "My Profile"),
+            key="candidate_profile_name",
+            help="A label for this profile, e.g. 'Data Scientist Profile'",
         )
         st.text_input(
             "Full Name",
@@ -474,17 +580,33 @@ with page[0]:
         key="candidate_summary",
     )
 
-    if st.button("Save Candidate Profile", type="primary"):
-        try:
-            payload = build_candidate_payload()
-            result = api_post("/profile", payload)
-            st.session_state.saved_profile = result
-            st.success("Profile saved successfully.")
-        except Exception as e:
-            show_api_error(e)
-
-    with st.expander("Candidate JSON Preview"):
-        st.json(build_candidate_payload())
+    if st.button("Save Profile", type="primary"):
+        if not active_id:
+            st.warning("Please create a profile first using the '＋ New' button.")
+        else:
+            try:
+                payload = {
+                    "profile_name": st.session_state.get("candidate_profile_name", "My Profile"),
+                    "full_name": st.session_state.get("candidate_full_name", ""),
+                    "current_title": st.session_state.get("candidate_current_title", ""),
+                    "location": st.session_state.get("candidate_location", ""),
+                    "education": st.session_state.get("candidate_education") or None,
+                    "years_experience": int(st.session_state.get("candidate_years_experience", 0)),
+                    "skills": split_csv(st.session_state.get("candidate_skills", "")),
+                    "tools": split_csv(st.session_state.get("candidate_tools", "")),
+                    "domains": split_csv(st.session_state.get("candidate_domains", "")),
+                    "certifications": split_csv(st.session_state.get("candidate_certifications", "")),
+                    "projects": split_csv(st.session_state.get("candidate_projects", "")),
+                    "seniority": st.session_state.get("candidate_seniority") or None,
+                    "summary": st.session_state.get("candidate_summary") or None,
+                }
+                result = api_post(f"/profiles/{active_id}", payload, method="PUT")
+                st.session_state.saved_profile = result
+                st.session_state.profiles_loaded = False  # refresh selector
+                st.success("Profile saved successfully.")
+                st.rerun()
+            except Exception as e:
+                show_api_error(e)
 
 
 # ============================================================

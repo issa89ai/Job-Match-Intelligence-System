@@ -122,10 +122,13 @@ class UserMeResponse(BaseModel):
 
 class SavedProfileRequest(BaseModel):
     """
-    Request schema for saving candidate profile.
+    Request schema for creating or updating a candidate profile.
+    candidate_id is NOT included — it is system-generated (UUID).
     """
 
-    candidate_id: str = Field(default="", max_length=100)
+    # Human-readable label the user picks for this profile.
+    profile_name: str = Field(default="My Profile", max_length=100)
+
     full_name: str = Field(default="", max_length=100)
     current_title: str = Field(default="", max_length=100)
     location: str = Field(default="", max_length=100)
@@ -145,7 +148,7 @@ class SavedProfileRequest(BaseModel):
     summary: Optional[str] = None
 
     @field_validator(
-        "candidate_id",
+        "profile_name",
         "full_name",
         "current_title",
         "location",
@@ -153,12 +156,8 @@ class SavedProfileRequest(BaseModel):
     )
     @classmethod
     def strip_optional_text(cls, value) -> str:
-        """
-        Convert None to empty string and strip spaces.
-        """
         if value is None:
             return ""
-
         return str(value).strip()
 
     @field_validator(
@@ -169,14 +168,9 @@ class SavedProfileRequest(BaseModel):
     )
     @classmethod
     def strip_optional_nullable_text(cls, value):
-        """
-        Convert blank nullable fields to None.
-        """
         if value is None:
             return None
-
         value = str(value).strip()
-
         return value if value else None
 
 
@@ -186,11 +180,13 @@ class SavedProfileRequest(BaseModel):
 
 class SavedProfileResponse(BaseModel):
     """
-    Response returned after saving/loading candidate profile.
+    Response returned after creating/updating/loading a profile.
+    candidate_id is system-generated and read-only.
     """
 
     user_id: int
-    candidate_id: str
+    candidate_id: str        # UUID, assigned by the system
+    profile_name: str        # Human-readable label
     full_name: str
     current_title: str
     location: str
@@ -205,6 +201,32 @@ class SavedProfileResponse(BaseModel):
 
     seniority: Optional[str] = None
     summary: Optional[str] = None
+
+
+# =========================================================
+# Profile List Item  (used in GET /profiles)
+# =========================================================
+
+class ProfileListItem(BaseModel):
+    """
+    Lightweight profile summary for the profile selector.
+    """
+    candidate_id: str
+    profile_name: str
+    current_title: str
+    full_name: str
+
+
+# =========================================================
+# Profile List Response
+# =========================================================
+
+class ProfileListResponse(BaseModel):
+    """
+    Response for listing all profiles belonging to the current user.
+    """
+    count: int
+    profiles: List[ProfileListItem]
 
 
 # =========================================================

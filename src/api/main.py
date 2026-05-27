@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
@@ -28,6 +28,8 @@ from src.api.user_schemas import (
     LoginRequest,
     PreferenceRequest,
     PreferenceResponse,
+    ProfileListItem,
+    ProfileListResponse,
     RegisterRequest,
     SavedProfileRequest,
     SavedProfileResponse,
@@ -430,28 +432,140 @@ def get_me(current_user: User = Depends(get_current_user)) -> UserMeResponse:
 
 
 # -----------------------------
-# Profile
+# Profiles (multi-profile per user)
 # -----------------------------
+
+def _record_to_response(user_id: int, record: CandidateProfileRecord) -> SavedProfileResponse:
+    """Convert a DB record into the SavedProfileResponse schema."""
+    return SavedProfileResponse(
+        user_id=user_id,
+        candidate_id=record.candidate_id,
+        profile_name=record.profile_name or "My Profile",
+        full_name=record.full_name or "",
+        current_title=record.current_title or "",
+        location=record.location or "",
+        education=record.education,
+        years_experience=record.years_experience or 0,
+        skills=_json_load(record.skills_json),
+        tools=_json_load(record.tools_json),
+        domains=_json_load(record.domains_json),
+        certifications=_json_load(record.certifications_json),
+        projects=_json_load(record.projects_json),
+        seniority=record.seniority,
+        summary=record.summary or "",
+    )
+
+
+@app.get(
+    "/profiles",
+    response_model=ProfileListResponse,
+    tags=["Profile"],
+    summary="List all candidate profiles for current user",
+)
+def list_profiles(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ProfileListResponse:
+    records = db.query(CandidateProfileRecord).filter(
+        CandidateProfileRecord.user_id == current_user.id
+    ).all()
+
+    items = [
+        ProfileListItem(
+            candidate_id=r.candidate_id,
+            profile_name=r.profile_name or "My Profile",
+            current_title=r.current_title or "",
+            full_name=r.full_name or "",
+        )
+        for r in records
+    ]
+
+    return ProfileListResponse(count=len(items), profiles=items)
+
+
 @app.post(
-    "/profile",
+    "/profiles",
     response_model=SavedProfileResponse,
     tags=["Profile"],
-    summary="Save candidate profile for current user",
+    summary="Create a new candidate profile (system assigns candidate_id)",
+    status_code=201,
 )
-def save_profile(
+def create_profile(
+    payload: SavedProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SavedProfileResponse:
+    import uuid as _uuid
+
+    record = CandidateProfileRecord(
+        user_id=current_user.id,
+        candidate_id=str(_uuid.uuid4()),   # system-generated, never editable
+        profile_name=payload.profile_name,
+        full_name=payload.full_name,
+        current_title=payload.current_title,
+        location=payload.location,
+        education=payload.education,
+        years_experience=payload.years_experience,
+        skills_json=_json_dump(payload.skills),
+        tools_json=_json_dump(payload.tools),
+        domains_json=_json_dump(payload.domains),
+        certifications_json=_json_dump(payload.certifications),
+        projects_json=_json_dump(payload.projects),
+        seniority=payload.seniority,
+        summary=payload.summary,
+    )
+
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+
+    return _record_to_response(current_user.id, record)
+
+
+@app.get(
+    "/profiles/{candidate_id}",
+    response_model=SavedProfileResponse,
+    tags=["Profile"],
+    summary="Load a specific candidate profile by its ID",
+)
+def get_profile(
+    candidate_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SavedProfileResponse:
+    record = db.query(CandidateProfileRecord).filter(
+        CandidateProfileRecord.candidate_id == candidate_id,
+        CandidateProfileRecord.user_id == current_user.id,
+    ).first()
+
+    if not record:
+        raise HTTPException(status_code=404, detail="Profile not found.")
+
+    return _record_to_response(current_user.id, record)
+
+
+@app.put(
+    "/profiles/{candidate_id}",
+    response_model=SavedProfileResponse,
+    tags=["Profile"],
+    summary="Update an existing candidate profile",
+)
+def update_profile(
+    candidate_id: str,
     payload: SavedProfileRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SavedProfileResponse:
     record = db.query(CandidateProfileRecord).filter(
-        CandidateProfileRecord.user_id == current_user.id
+        CandidateProfileRecord.candidate_id == candidate_id,
+        CandidateProfileRecord.user_id == current_user.id,
     ).first()
 
     if not record:
-        record = CandidateProfileRecord(user_id=current_user.id)
-        db.add(record)
+        raise HTTPException(status_code=404, detail="Profile not found.")
 
-    record.candidate_id = payload.candidate_id
+    # candidate_id is never updated — it is immutable
+    record.profile_name = payload.profile_name
     record.full_name = payload.full_name
     record.current_title = payload.current_title
     record.location = payload.location
@@ -468,57 +582,32 @@ def save_profile(
     db.commit()
     db.refresh(record)
 
-    return SavedProfileResponse(
-        user_id=current_user.id,
-        candidate_id=record.candidate_id,
-        full_name=record.full_name or "",
-        current_title=record.current_title or "",
-        location=record.location or "",
-        education=record.education,
-        years_experience=record.years_experience,
-        skills=_json_load(record.skills_json),
-        tools=_json_load(record.tools_json),
-        domains=_json_load(record.domains_json),
-        certifications=_json_load(record.certifications_json),
-        projects=_json_load(record.projects_json),
-        seniority=record.seniority,
-        summary=record.summary or "",
-    )
+    return _record_to_response(current_user.id, record)
 
 
-@app.get(
-    "/profile",
-    response_model=SavedProfileResponse,
+@app.delete(
+    "/profiles/{candidate_id}",
     tags=["Profile"],
-    summary="Load candidate profile for current user",
+    summary="Delete a candidate profile",
+    status_code=204,
+    response_class=Response,
 )
-def load_profile(
+def delete_profile(
+    candidate_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> SavedProfileResponse:
+) -> Response:
     record = db.query(CandidateProfileRecord).filter(
-        CandidateProfileRecord.user_id == current_user.id
+        CandidateProfileRecord.candidate_id == candidate_id,
+        CandidateProfileRecord.user_id == current_user.id,
     ).first()
 
     if not record:
-        raise HTTPException(status_code=404, detail="No saved profile found.")
+        raise HTTPException(status_code=404, detail="Profile not found.")
 
-    return SavedProfileResponse(
-        user_id=current_user.id,
-        candidate_id=record.candidate_id,
-        full_name=record.full_name or "",
-        current_title=record.current_title or "",
-        location=record.location or "",
-        education=record.education,
-        years_experience=record.years_experience,
-        skills=_json_load(record.skills_json),
-        tools=_json_load(record.tools_json),
-        domains=_json_load(record.domains_json),
-        certifications=_json_load(record.certifications_json),
-        projects=_json_load(record.projects_json),
-        seniority=record.seniority,
-        summary=record.summary or "",
-    )
+    db.delete(record)
+    db.commit()
+    return Response(status_code=204)
 
 
 # -----------------------------
