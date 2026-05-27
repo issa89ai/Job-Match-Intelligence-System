@@ -198,6 +198,12 @@ def recommend_jobs_for_candidate(
                     {},
                 ).get("recommendations", []),
 
+                # Pass through extra display fields (used by Live Jobs tab).
+                "source_url": job.get("source_url", ""),
+                "employer_logo": job.get("employer_logo", ""),
+                "description_snippet": job.get("description_snippet", ""),
+                "date_posted": job.get("date_posted", ""),
+
                 # Keep full result for debugging/details.
                 "full_result": match_result,
             }

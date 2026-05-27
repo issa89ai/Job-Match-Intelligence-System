@@ -46,6 +46,7 @@ def init_state() -> None:
         "jobs_dataset_path": "",
         "last_match_result": None,
         "last_recommendations": None,
+        "last_live_recommendations": None,
     }
 
     for key, value in defaults.items():
@@ -98,6 +99,7 @@ def logout() -> None:
     st.session_state.saved_preferences = {}
     st.session_state.last_match_result = None
     st.session_state.last_recommendations = None
+    st.session_state.last_live_recommendations = None
     st.rerun()
 
 
@@ -371,6 +373,7 @@ page = st.tabs(
         "Single Match",
         "Job Explorer",
         "Recommendations",
+        "Live Jobs",
         "Preferences",
     ]
 )
@@ -653,9 +656,155 @@ with page[3]:
 
 
 # ============================================================
-# Preferences
+# Live Jobs
 # ============================================================
 with page[4]:
+    st.header("🌐 Live Job Search")
+    st.write(
+        "Search real-time job postings from LinkedIn, Indeed, Glassdoor, and more — "
+        "then instantly score them against your candidate profile."
+    )
+
+    st.divider()
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        live_search_query = st.text_input(
+            "Job Title / Keywords",
+            placeholder="e.g. data scientist, machine learning engineer",
+            key="live_search_query",
+        )
+        live_location = st.text_input(
+            "Location (optional)",
+            placeholder="e.g. New York, Toronto, remote",
+            key="live_location",
+        )
+
+    with col2:
+        live_top_k = st.number_input(
+            "Top K results",
+            min_value=1,
+            max_value=10,
+            value=5,
+            key="live_top_k",
+        )
+        live_date_posted = st.selectbox(
+            "Date Posted",
+            options=["all", "today", "3days", "week", "month"],
+            index=0,
+            key="live_date_posted",
+        )
+
+    live_use_preferences = st.checkbox(
+        "Apply my saved preferences (location, seniority, min score...)",
+        value=False,
+        key="live_use_preferences",
+    )
+
+    st.info(
+        "Your **Candidate Profile** tab values are used for matching — "
+        "make sure your skills and experience are filled in before searching."
+    )
+
+    if st.button("Search Live Jobs", type="primary", key="live_search_btn"):
+        if not live_search_query.strip():
+            st.warning("Please enter a job title or keywords to search.")
+        else:
+            try:
+                with st.spinner(f"Searching live jobs for '{live_search_query}'..."):
+                    live_payload = {
+                        "candidate": build_candidate_payload(),
+                        "search_query": live_search_query.strip(),
+                        "location": live_location.strip(),
+                        "top_k": int(live_top_k),
+                        "date_posted": live_date_posted,
+                        "preferences": build_preferences_payload() if live_use_preferences else None,
+                    }
+                    live_result = api_post("/recommendations/live", live_payload)
+                    st.session_state["last_live_recommendations"] = live_result
+
+                st.success(
+                    f"Found and scored {live_result.get('count', 0)} live jobs."
+                )
+
+            except Exception as e:
+                show_api_error(e)
+
+    # Display live results
+    if st.session_state.get("last_live_recommendations"):
+        result = st.session_state["last_live_recommendations"]
+        recommendations = result.get("recommendations", [])
+
+        if not recommendations:
+            st.warning("No matching live jobs found. Try a different search query or location.")
+        else:
+            st.divider()
+            st.subheader(f"Top {len(recommendations)} Live Job Matches")
+
+            for index, item in enumerate(recommendations, start=1):
+                full = item.get("full_result", {})
+                job_data = full.get("explanation", {})
+
+                with st.container(border=True):
+                    # Header row: rank + title
+                    title_col, score_col = st.columns([3, 1])
+                    with title_col:
+                        st.markdown(f"### {index}. {item.get('title', 'Untitled')}")
+                        company = item.get("company", "")
+                        location = item.get("location", "")
+                        wtype = item.get("workplace_type", "")
+                        meta_parts = [p for p in [company, location, wtype] if p]
+                        st.caption(" · ".join(meta_parts))
+
+                    with score_col:
+                        score = item.get("score", 0)
+                        fit = item.get("fit_label", "Unknown")
+                        st.metric("Match Score", f"{score}%")
+                        st.caption(fit)
+
+                    # Hard filter status
+                    passed = item.get("hard_filters_passed", False)
+                    if passed:
+                        st.success("✅ Hard filters passed")
+                    else:
+                        st.warning("⚠️ Hard filters not fully passed")
+
+                    # Skills
+                    skill_c1, skill_c2 = st.columns(2)
+                    with skill_c1:
+                        matched = item.get("matched_required_skills", [])
+                        st.markdown("**Matched Skills**")
+                        st.write(", ".join(matched) if matched else "None detected")
+
+                    with skill_c2:
+                        missing = item.get("missing_required_skills", [])
+                        st.markdown("**Missing Skills**")
+                        if missing:
+                            st.warning(", ".join(missing))
+                        else:
+                            st.success("None missing")
+
+                    # Improvement suggestions
+                    recs = item.get("recommendations", [])
+                    if recs:
+                        with st.expander("Improvement Suggestions"):
+                            for rec in recs:
+                                st.write(f"- {rec}")
+
+                    # Apply link — passed through directly from JSearch
+                    apply_link = item.get("source_url", "")
+                    if apply_link:
+                        st.link_button("Apply on Original Website", apply_link)
+
+                    with st.expander("Full Match Details"):
+                        st.json(item.get("full_result", item))
+
+
+# ============================================================
+# Preferences
+# ============================================================
+with page[5]:
     st.header("Job Preferences")
 
     st.text_area(

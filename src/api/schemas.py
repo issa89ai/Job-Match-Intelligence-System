@@ -156,9 +156,16 @@ class RecommendationRequest(BaseModel):
 class DatasetRecommendationRequest(BaseModel):
     """
     Request body for ranking candidate against dataset jobs.
+
+    Supply either a structured ``candidate`` object OR raw ``resume_text``.
+    If both are provided, ``candidate`` takes precedence.
     """
 
-    candidate: CandidateInput
+    # Structured candidate (preferred).
+    candidate: Optional[CandidateInput] = None
+
+    # Raw resume text — backend will extract structured fields from it.
+    resume_text: Optional[str] = None
 
     preferences: Optional[Dict[str, Any]] = None
 
@@ -235,3 +242,33 @@ class JobsPreviewResponse(BaseModel):
     jobs: List[JobInput]
 
     dataset_path: str
+
+
+# =========================================================
+# Live Recommendation Request
+# =========================================================
+
+class LiveRecommendationRequest(BaseModel):
+    """
+    Request body for live job recommendations via JSearch.
+
+    The backend fetches real-time jobs from the web matching
+    the search_query, then scores them against the candidate.
+    """
+
+    candidate: CandidateInput
+
+    # Job title / keywords to search for live, e.g. "data scientist"
+    search_query: str = Field(..., min_length=1)
+
+    # Optional location filter, e.g. "New York" or "remote"
+    location: str = ""
+
+    # Optional preference filters (same as dataset recommendations)
+    preferences: Optional[Dict[str, Any]] = None
+
+    # How many top results to return
+    top_k: int = Field(default=10, ge=1, le=50)
+
+    # Date posted filter: "all", "today", "3days", "week", "month"
+    date_posted: str = "all"

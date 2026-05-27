@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,7 @@ from src.api.schemas import (
     HealthResponse,
     JobsPreviewResponse,
     JobInput,
+    LiveRecommendationRequest,
     MatchRequest,
     MatchResponse,
     RecommendationRequest,
@@ -41,6 +43,7 @@ from src.candidate.feature_builder import build_candidate_features
 from src.candidate.parser import parse_candidate_profile
 from src.db.database import Base, engine, get_db
 from src.db.models import CandidateProfileRecord, User, UserPreferenceRecord
+from src.ingestion.jsearch import JSearchClient
 from src.matching.ranking import rank_candidate_for_job
 from src.matching.recommendation import recommend_jobs_for_candidate
 
@@ -64,7 +67,17 @@ saved profiles, saved preferences, and multi-job recommendations.
         {"name": "Matching", "description": "Core job-candidate matching endpoints."},
         {"name": "Recommendations", "description": "Multi-job recommendation endpoints."},
         {"name": "Jobs", "description": "Dataset-backed job preview endpoints."},
+        {"name": "Live", "description": "Real-time job search and matching via JSearch."},
     ],
+)
+
+# Allow browser requests from any origin so jobmatch.html can call the API.
+# Tighten allow_origins to your deployed domain before going to production.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -108,6 +121,129 @@ def _safe_list(value: Any) -> List[str]:
         return [item.strip() for item in stripped.split(",") if item.strip()]
 
     return [str(value).strip()] if str(value).strip() else []
+
+
+def _parse_resume_text(text: str) -> dict:
+    """
+    Extract a best-effort CandidateInput dict from raw resume text.
+
+    Uses simple regex heuristics — good enough for quick matching from a
+    text paste. Falls back gracefully when fields cannot be detected.
+    """
+    import re
+
+    lines = [ln.strip() for ln in text.strip().splitlines() if ln.strip()]
+    text_lower = text.lower()
+
+    # ── Name & title from first line ───────────────────────────────────
+    full_name = ""
+    current_title = ""
+    if lines:
+        first = lines[0]
+        for sep in [" — ", " – ", " - ", " | ", ":"]:
+            if sep in first:
+                parts = first.split(sep, 1)
+                full_name = parts[0].strip()
+                current_title = parts[1].strip()
+                break
+        else:
+            full_name = first
+
+    # ── Location: scan first 5 lines ───────────────────────────────────
+    location = ""
+    location_hints = [
+        "ottawa", "toronto", "vancouver", "montreal", "calgary", "edmonton",
+        "remote", "canada", "new york", "san francisco", "london", "berlin",
+        "seattle", "boston", "austin", "chicago",
+    ]
+    for ln in lines[:5]:
+        ln_low = ln.lower()
+        if any(h in ln_low for h in location_hints):
+            location = ln.split("|")[0].strip()
+            break
+
+    # ── Education ──────────────────────────────────────────────────────
+    education = None
+    edu_map = [
+        (r"\bph\.?d\b|\bdoctorate\b", "phd"),
+        (r"\bmaster'?s?\b|\bmsc\b|\bmba\b|\bm\.s\b", "master"),
+        (r"\bbachelor'?s?\b|\bbsc\b|\bb\.s\b|\bb\.a\b", "bachelor"),
+        (r"\bassociate\b", "associate"),
+        (r"\bhigh school\b|\bsecondary\b", "high_school"),
+    ]
+    for pattern, level in edu_map:
+        if re.search(pattern, text_lower):
+            education = level
+            break
+
+    # ── Years of experience ────────────────────────────────────────────
+    years_experience = 0
+    exp_match = re.search(r"(\d+)\s*\+?\s*years?\s*(?:of\s+)?(?:experience|exp)", text_lower)
+    if exp_match:
+        years_experience = int(exp_match.group(1))
+
+    # ── Seniority: derive from years, then override from title keywords ─
+    seniority = None
+    if years_experience >= 5:
+        seniority = "senior"
+    elif years_experience >= 3:
+        seniority = "mid"
+    elif years_experience >= 1:
+        seniority = "entry"
+
+    title_lower = current_title.lower()
+    for kw in ["senior", "lead", "principal", "staff", "head", "vp"]:
+        if kw in title_lower:
+            seniority = "senior"
+            break
+    for kw in ["junior", "entry"]:
+        if kw in title_lower:
+            seniority = "entry"
+            break
+    if "mid" in title_lower:
+        seniority = "mid"
+
+    # ── Skills / tools / domains: look for labelled lines first ────────
+    def _extract_labelled_list(label: str) -> List[str]:
+        m = re.search(rf"{label}\s*[:\-]\s*([^\n]+)", text, re.IGNORECASE)
+        if m:
+            return [s.strip().lower() for s in m.group(1).split(",") if s.strip()]
+        return []
+
+    skills = _extract_labelled_list("skills?")
+    tools = _extract_labelled_list("tools?")
+    domains = _extract_labelled_list("domains?")
+
+    # If no explicit Skills: line, scan for common tech keywords in the full text
+    if not skills:
+        known_skills = [
+            "python", "sql", "java", "javascript", "typescript", "react", "node.js",
+            "machine learning", "deep learning", "nlp", "pandas", "numpy",
+            "scikit-learn", "tensorflow", "pytorch", "keras",
+            "docker", "kubernetes", "aws", "azure", "gcp",
+            "postgresql", "mysql", "mongodb", "redis",
+            "fastapi", "django", "flask", "spring",
+            "power bi", "tableau", "excel", "r", "scala", "spark", "kafka",
+            "git", "linux", "bash", "c++", "go", "rust", "swift",
+            "statistics", "data visualization", "data analysis",
+        ]
+        skills = [s for s in known_skills if s in text_lower]
+
+    return {
+        "candidate_id": "candidate_001",
+        "full_name": full_name or "Candidate",
+        "current_title": current_title or "",
+        "location": location or "",
+        "education": education,
+        "years_experience": years_experience,
+        "skills": skills,
+        "tools": tools,
+        "domains": domains,
+        "certifications": [],
+        "projects": [],
+        "seniority": seniority,
+        "summary": text[:500],
+    }
 
 
 def _find_latest_jobs_dataset(custom_path: Optional[str] = None) -> str:
@@ -532,11 +668,22 @@ def get_recommendations(payload: RecommendationRequest) -> RecommendationRespons
 def get_recommendations_from_dataset(
     payload: DatasetRecommendationRequest,
 ) -> RecommendationResponse:
+    # Resolve candidate payload: structured object takes precedence over raw text.
+    if payload.candidate is not None:
+        candidate_payload = payload.candidate.model_dump()
+    elif payload.resume_text:
+        candidate_payload = _parse_resume_text(payload.resume_text)
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail="Provide either 'candidate' (structured) or 'resume_text' (raw text).",
+        )
+
     csv_path = _find_latest_jobs_dataset(payload.dataset_path)
     jobs = _load_jobs_from_csv(csv_path, limit_jobs=payload.limit_jobs)
 
     results = recommend_jobs_for_candidate(
-        candidate_payload=payload.candidate.model_dump(),
+        candidate_payload=candidate_payload,
         jobs_payload=jobs,
         preferences_payload=payload.preferences,
         top_k=payload.top_k,
@@ -546,6 +693,86 @@ def get_recommendations_from_dataset(
         count=len(results),
         recommendations=results,
     )
+
+
+# -----------------------------
+# Live Jobs (JSearch)
+# -----------------------------
+
+def _get_jsearch_client() -> JSearchClient:
+    """
+    Load JSearch config from sources.yaml and return a ready client.
+    Raises HTTPException if JSearch is not configured or disabled.
+    """
+    import yaml
+
+    try:
+        with open("configs/sources.yaml", "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="configs/sources.yaml not found.")
+
+    jsearch_cfg = config.get("sources", {}).get("jsearch", {})
+
+    if not jsearch_cfg.get("enabled", False):
+        raise HTTPException(
+            status_code=503,
+            detail="JSearch is disabled. Set sources.jsearch.enabled: true in configs/sources.yaml.",
+        )
+
+    api_key = jsearch_cfg.get("api_key", "").strip()
+    if not api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="JSearch API key is missing in configs/sources.yaml.",
+        )
+
+    return JSearchClient(
+        api_key=api_key,
+        host=jsearch_cfg.get("host", "jsearch.p.rapidapi.com"),
+        base_url=jsearch_cfg.get("base_url", "https://jsearch.p.rapidapi.com"),
+        request_timeout_seconds=jsearch_cfg.get("request_timeout_seconds", 15),
+        max_results_per_query=jsearch_cfg.get("max_results_per_query", 10),
+    )
+
+
+@app.post(
+    "/recommendations/live",
+    response_model=RecommendationResponse,
+    tags=["Live"],
+    summary="Fetch real-time jobs and rank them for a candidate",
+)
+def get_live_recommendations(payload: LiveRecommendationRequest) -> RecommendationResponse:
+    """
+    1. Calls JSearch API with the candidate's search_query + location.
+    2. Normalizes the live job results into the unified schema.
+    3. Runs the full matching engine (hard filters + scoring + explanations).
+    4. Returns top-K ranked results — same format as dataset recommendations.
+    """
+    client = _get_jsearch_client()
+
+    # Fetch live jobs from the web.
+    raw_jobs = client.search_jobs(
+        query=payload.search_query,
+        location=payload.location,
+        date_posted=payload.date_posted,
+    )
+
+    if not raw_jobs:
+        return RecommendationResponse(count=0, recommendations=[])
+
+    # Normalize into the unified matching schema.
+    jobs = client.normalize_jobs(raw_jobs, search_query=payload.search_query)
+
+    # Run matching engine + preference filtering + ranking.
+    results = recommend_jobs_for_candidate(
+        candidate_payload=payload.candidate.model_dump(),
+        jobs_payload=jobs,
+        preferences_payload=payload.preferences,
+        top_k=payload.top_k,
+    )
+
+    return RecommendationResponse(count=len(results), recommendations=results)
 
 
 if __name__ == "__main__":
