@@ -49,6 +49,7 @@ def init_state() -> None:
         "last_match_result": None,
         "last_recommendations": None,
         "last_live_recommendations": None,
+        "resume_extracted": None,
     }
 
     for key, value in defaults.items():
@@ -486,6 +487,167 @@ with page[0]:
     # ── Show system-assigned Candidate ID (read-only) ─────
     if active_id:
         st.caption(f"🔑 Candidate ID (system-assigned): `{active_id}`")
+
+    st.divider()
+
+    # ── Profile Completeness Bar ──────────────────────────
+    def compute_completeness_local(profile: dict) -> dict:
+        """Compute completeness locally without an API call."""
+        weights = {
+            "skills": 25, "years_experience": 15, "current_title": 15,
+            "education": 10, "seniority": 10, "domains": 10,
+            "summary": 10, "location": 5,
+        }
+        labels = {
+            "skills": "Skills (at least 3)",
+            "years_experience": "Years of experience",
+            "current_title": "Current job title",
+            "education": "Education level",
+            "seniority": "Seniority level",
+            "domains": "Domain / industry",
+            "summary": "Professional summary",
+            "location": "Location",
+        }
+        score = 0
+        missing = []
+        for field, weight in weights.items():
+            val = profile.get(field)
+            ok = False
+            if isinstance(val, list):
+                ok = len(val) >= (3 if field == "skills" else 1)
+            elif isinstance(val, int):
+                ok = val > 0
+            elif val:
+                ok = True
+            if ok:
+                score += weight
+            else:
+                missing.append({"label": labels[field], "weight": weight})
+        missing.sort(key=lambda x: x["weight"], reverse=True)
+        return {"score": score, "missing": missing}
+
+    current_profile_for_score = {
+        "skills":           split_csv(st.session_state.get("candidate_skills", "")) or profile_value("skills", []),
+        "years_experience": st.session_state.get("candidate_years_experience") or profile_value("years_experience", 0),
+        "current_title":    st.session_state.get("candidate_current_title") or profile_value("current_title", ""),
+        "education":        st.session_state.get("candidate_education") or profile_value("education", ""),
+        "seniority":        st.session_state.get("candidate_seniority") or profile_value("seniority", ""),
+        "domains":          split_csv(st.session_state.get("candidate_domains", "")) or profile_value("domains", []),
+        "summary":          st.session_state.get("candidate_summary") or profile_value("summary", ""),
+        "location":         st.session_state.get("candidate_location") or profile_value("location", ""),
+    }
+    completeness = compute_completeness_local(current_profile_for_score)
+    score = completeness["score"]
+    missing_fields = completeness["missing"]
+
+    # Color the bar based on score
+    if score >= 80:
+        bar_color = "green"
+        score_label = "Great"
+    elif score >= 50:
+        bar_color = "orange"
+        score_label = "Good — a few things missing"
+    else:
+        bar_color = "red"
+        score_label = "Incomplete — please fill in more details"
+
+    st.markdown(f"**Profile Completeness: {score}% — {score_label}**")
+    st.progress(score / 100)
+
+    if missing_fields:
+        with st.expander(f"📋 {len(missing_fields)} field(s) missing — click to see what to add"):
+            for item in missing_fields:
+                st.write(f"• **{item['label']}** — adds {item['weight']}%")
+
+    st.divider()
+
+    # ── Resume Upload Section ─────────────────────────────
+    st.subheader("📄 Upload Resume to Auto-fill")
+    st.write("Upload your resume and we'll extract your information automatically.")
+
+    upload_col, info_col = st.columns([2, 3])
+    with upload_col:
+        uploaded_file = st.file_uploader(
+            "Choose your resume",
+            type=["pdf", "docx", "txt"],
+            key="resume_upload",
+            label_visibility="collapsed",
+        )
+
+    with info_col:
+        st.caption("Supported formats: PDF, DOCX, TXT · Max size: 10 MB")
+        st.caption("Your file is only used to fill the form below — it is not stored.")
+
+    if uploaded_file is not None:
+        if st.button("Extract & Auto-fill Profile", type="primary", key="extract_resume_btn"):
+            with st.spinner("Reading your resume..."):
+                try:
+                    response = requests.post(
+                        f"{st.session_state.api_url}/resume/parse",
+                        headers={"Authorization": f"Bearer {st.session_state.token}"},
+                        files={"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)},
+                        timeout=60,
+                    )
+                    response.raise_for_status()
+                    parsed = response.json()
+
+                    extracted = parsed.get("extracted_profile", {})
+                    comp = parsed.get("completeness", {})
+
+                    # Store extracted data to pre-fill the form
+                    st.session_state["resume_extracted"] = extracted
+
+                    score_after = comp.get("score", 0)
+                    missing_after = comp.get("missing", [])
+
+                    st.success(f"Resume parsed! Profile completeness from your resume: **{score_after}%**")
+
+                    if missing_after:
+                        st.warning(
+                            "We couldn't detect the following — please fill them in manually: "
+                            + ", ".join(f['label'] for f in missing_after)
+                        )
+                    else:
+                        st.success("All profile fields were detected!")
+
+                except requests.exceptions.HTTPError as e:
+                    try:
+                        detail = e.response.json().get("detail", str(e))
+                    except Exception:
+                        detail = str(e)
+                    st.error(f"Could not parse resume: {detail}")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+    # If resume was just extracted, pre-fill session state values
+    if st.session_state.get("resume_extracted"):
+        ex = st.session_state["resume_extracted"]
+        if ex.get("full_name"):
+            st.session_state["candidate_full_name"] = ex["full_name"]
+        if ex.get("current_title"):
+            st.session_state["candidate_current_title"] = ex["current_title"]
+        if ex.get("location"):
+            st.session_state["candidate_location"] = ex["location"]
+        if ex.get("years_experience"):
+            st.session_state["candidate_years_experience"] = ex["years_experience"]
+        if ex.get("education"):
+            st.session_state["candidate_education"] = ex["education"]
+        if ex.get("seniority"):
+            st.session_state["candidate_seniority"] = ex["seniority"]
+        if ex.get("skills"):
+            st.session_state["candidate_skills"] = ", ".join(ex["skills"])
+        if ex.get("tools"):
+            st.session_state["candidate_tools"] = ", ".join(ex["tools"])
+        if ex.get("domains"):
+            st.session_state["candidate_domains"] = ", ".join(ex["domains"])
+        if ex.get("summary"):
+            st.session_state["candidate_summary"] = ex["summary"]
+        if ex.get("certifications"):
+            st.session_state["candidate_certifications"] = ", ".join(ex["certifications"])
+        if ex.get("projects"):
+            st.session_state["candidate_projects"] = ", ".join(ex["projects"])
+        # Clear so it doesn't re-apply on every rerun
+        st.session_state["resume_extracted"] = None
 
     st.divider()
 

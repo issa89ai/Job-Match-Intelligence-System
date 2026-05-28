@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from fastapi import File, UploadFile
+
 import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,6 +47,7 @@ from src.candidate.feature_builder import build_candidate_features
 from src.candidate.parser import parse_candidate_profile
 from src.db.database import Base, engine, get_db
 from src.db.models import CandidateProfileRecord, User, UserPreferenceRecord
+from src.candidate.resume_extractor import parse_resume, compute_profile_completeness
 from src.ingestion.jsearch import JSearchClient
 from src.matching.ranking import rank_candidate_for_job
 from src.matching.recommendation import recommend_jobs_for_candidate
@@ -70,6 +73,7 @@ saved profiles, saved preferences, and multi-job recommendations.
         {"name": "Recommendations", "description": "Multi-job recommendation endpoints."},
         {"name": "Jobs", "description": "Dataset-backed job preview endpoints."},
         {"name": "Live", "description": "Real-time job search and matching via JSearch."},
+        {"name": "Resume", "description": "Resume upload, parsing, and profile completeness."},
     ],
 )
 
@@ -782,6 +786,66 @@ def get_recommendations_from_dataset(
         count=len(results),
         recommendations=results,
     )
+
+
+# -----------------------------
+# Resume
+# -----------------------------
+
+@app.post(
+    "/resume/parse",
+    tags=["Resume"],
+    summary="Upload a resume (PDF / DOCX / TXT) and extract candidate profile fields",
+)
+async def parse_resume_upload(
+    file: UploadFile = File(...),
+) -> Dict[str, Any]:
+    """
+    Accepts a resume file, extracts all candidate fields, and returns:
+    - extracted_profile: structured candidate data ready to fill the profile form
+    - completeness: score (0-100) + list of missing fields
+    - raw_text_preview: first 800 chars of extracted text (for debugging)
+    """
+    allowed = {".pdf", ".docx", ".txt"}
+    suffix = Path(file.filename or "").suffix.lower()
+
+    if suffix not in allowed:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unsupported file type '{suffix}'. Please upload PDF, DOCX, or TXT.",
+        )
+
+    file_bytes = await file.read()
+
+    if len(file_bytes) == 0:
+        raise HTTPException(status_code=422, detail="Uploaded file is empty.")
+
+    if len(file_bytes) > 10 * 1024 * 1024:   # 10 MB limit
+        raise HTTPException(status_code=422, detail="File too large. Maximum size is 10 MB.")
+
+    try:
+        result = parse_resume(file_bytes, file.filename or "resume.pdf")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Resume parsing failed: {exc}")
+
+    return result
+
+
+@app.post(
+    "/profile/completeness",
+    tags=["Resume"],
+    summary="Compute completeness score for a candidate profile (0–100)",
+)
+def profile_completeness(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Pass any candidate profile dict and receive back:
+    - score (0–100)
+    - filled list
+    - missing list with labels and weights
+    """
+    return compute_profile_completeness(payload)
 
 
 # -----------------------------
