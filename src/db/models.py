@@ -9,6 +9,7 @@ from __future__ import annotations
 import uuid
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     ForeignKey,
@@ -328,4 +329,60 @@ class UserPreferenceRecord(Base):
     user = relationship(
         "User",
         back_populates="preferences",
+    )
+
+
+# =========================================================
+# Password Reset Token Table
+# =========================================================
+
+class PasswordResetToken(Base):
+    """
+    Stores one-time password reset tokens.
+    Tokens are hashed (SHA-256) before storage.
+    Each token expires after 1 hour and is single-use.
+    """
+
+    __tablename__ = "password_reset_tokens"
+
+    # Primary key.
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    # Foreign key linking to users table.
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    # SHA-256 hash of the raw token (never store the raw token).
+    token_hash = Column(
+        String(64),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    # Token expiration timestamp (UTC).
+    expires_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+
+    # Whether this token has already been used.
+    used = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
+    # Creation timestamp.
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
     )

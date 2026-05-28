@@ -27,12 +27,15 @@ from src.api.schemas import (
 )
 from src.api.user_schemas import (
     AuthResponse,
+    ChangePasswordRequest,
+    ForgotPasswordRequest,
     LoginRequest,
     PreferenceRequest,
     PreferenceResponse,
     ProfileListItem,
     ProfileListResponse,
     RegisterRequest,
+    ResetPasswordRequest,
     SavedProfileRequest,
     SavedProfileResponse,
     UserMeResponse,
@@ -46,8 +49,9 @@ from src.auth.security import (
 from src.candidate.feature_builder import build_candidate_features
 from src.candidate.parser import parse_candidate_profile
 from src.db.database import Base, engine, get_db
-from src.db.models import CandidateProfileRecord, User, UserPreferenceRecord
+from src.db.models import CandidateProfileRecord, PasswordResetToken, User, UserPreferenceRecord
 from src.candidate.resume_extractor import parse_resume, compute_profile_completeness
+from src.api.email_service import send_password_reset_email
 from src.ingestion.jsearch import JSearchClient
 from src.matching.ranking import rank_candidate_for_job
 from src.matching.recommendation import recommend_jobs_for_candidate
@@ -433,6 +437,165 @@ def get_me(current_user: User = Depends(get_current_user)) -> UserMeResponse:
         email=current_user.email,
         full_name=current_user.full_name or "",
     )
+
+
+# -----------------------------
+# Password Reset (forgot password)
+# -----------------------------
+
+@app.post(
+    "/auth/forgot-password",
+    tags=["Auth"],
+    summary="Request a password reset email",
+    status_code=200,
+)
+def forgot_password(
+    payload: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+    Generates a one-time reset token and emails it to the user.
+    Always returns 200 — we never reveal whether the email exists
+    (prevents user enumeration).
+    """
+    import hashlib
+    import secrets
+    from datetime import datetime, timedelta, timezone
+
+    user = db.query(User).filter(User.email == payload.email).first()
+
+    if user:
+        # Invalidate any existing unused tokens for this user
+        db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.used == False,
+        ).delete()
+        db.flush()
+
+        # Generate a secure random token
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+
+        reset_record = PasswordResetToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            used=False,
+        )
+        db.add(reset_record)
+        db.commit()
+
+        # Send email — log outcome clearly to the backend terminal
+        email_ok = False
+        email_error = ""
+        try:
+            send_password_reset_email(to_email=user.email, token=raw_token)
+            email_ok = True
+            print(f"\n[PASSWORD RESET] Email sent to {user.email}")
+        except Exception as exc:
+            email_error = str(exc)
+            # Always print the token to the terminal so it can be used even
+            # when email is not configured yet (development convenience).
+            print(f"\n{'='*60}")
+            print(f"[PASSWORD RESET] Email delivery failed: {email_error}")
+            print(f"[PASSWORD RESET] Use this token manually for {user.email}:")
+            print(f"  TOKEN: {raw_token}")
+            print(f"{'='*60}\n")
+
+        if email_ok:
+            return {"message": "Reset link sent — check your inbox (also your spam folder)."}
+        else:
+            # Return the token directly so the user can paste it immediately.
+            # In production you would remove the token from the response and
+            # fix the email config instead.
+            return {
+                "message": (
+                    "⚠️ Email could not be sent (email not configured). "
+                    "Copy the token below and paste it into the reset form."
+                ),
+                "dev_token": raw_token,
+                "error_detail": email_error,
+            }
+
+    return {"message": "If that email is registered, a reset link has been sent."}
+
+
+@app.post(
+    "/auth/reset-password",
+    tags=["Auth"],
+    summary="Reset password using token from email",
+    status_code=200,
+)
+def reset_password(
+    payload: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+    Validates the reset token and sets a new password.
+    Token must be unused and not expired.
+    """
+    import hashlib
+    from datetime import datetime, timezone
+
+    token_hash = hashlib.sha256(payload.token.encode()).hexdigest()
+
+    record = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token_hash == token_hash,
+    ).first()
+
+    if not record:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
+
+    if record.used:
+        raise HTTPException(status_code=400, detail="This reset token has already been used.")
+
+    now = datetime.now(timezone.utc)
+    expires = record.expires_at
+    # Make timezone-aware for comparison if needed
+    if expires.tzinfo is None:
+        from datetime import timezone as tz
+        expires = expires.replace(tzinfo=tz.utc)
+
+    if now > expires:
+        raise HTTPException(status_code=400, detail="Reset token has expired. Please request a new one.")
+
+    # Update password
+    user = db.query(User).filter(User.id == record.user_id).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid reset token.")
+
+    user.password_hash = hash_password(payload.new_password)
+    record.used = True
+    db.commit()
+
+    return {"message": "Password updated successfully. You can now log in with your new password."}
+
+
+@app.post(
+    "/auth/change-password",
+    tags=["Auth"],
+    summary="Change password (must be logged in)",
+    status_code=200,
+)
+def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+    Allows an authenticated user to change their password.
+    Requires current password for verification.
+    """
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+    if payload.current_password == payload.new_password:
+        raise HTTPException(status_code=400, detail="New password must be different from your current password.")
+
+    current_user.password_hash = hash_password(payload.new_password)
+    db.commit()
+
+    return {"message": "Password changed successfully."}
 
 
 # -----------------------------
@@ -899,36 +1062,65 @@ def get_live_recommendations(payload: LiveRecommendationRequest) -> Recommendati
     """
     1. Calls JSearch API with the candidate's search_query + location.
     2. Normalizes the live job results into the unified schema.
-    3. Runs the full matching engine (hard filters + scoring + explanations).
-    4. Returns top-K ranked results — same format as dataset recommendations.
+    3. Runs the full matching engine against the candidate profile.
+    4. Returns results sorted by match score descending.
     """
-    client = _get_jsearch_client()
+    from src.db.database import get_db as _get_db
 
-    # Fetch live jobs from the web.
+    client = _get_jsearch_client()
+    if not client:
+        raise HTTPException(
+            status_code=503,
+            detail="Live job search is not configured. Check sources.yaml → jsearch section.",
+        )
+
     raw_jobs = client.search_jobs(
         query=payload.search_query,
-        location=payload.location,
-        date_posted=payload.date_posted,
+        location=payload.location or "",
+        date_posted=payload.date_posted or "all",
+        num_pages=1,
     )
+    jobs = client.normalize_jobs(raw_jobs)
 
-    if not raw_jobs:
-        return RecommendationResponse(count=0, recommendations=[])
+    if not jobs:
+        return RecommendationResponse(count=0, recommendations=[], dataset_path="live")
 
-    # Normalize into the unified matching schema.
-    jobs = client.normalize_jobs(raw_jobs, search_query=payload.search_query)
+    candidate = parse_candidate_profile(payload.candidate.dict())
+    prefs = payload.preferences.dict() if payload.preferences else None
+    top_k = payload.top_k or 5
 
-    # Run matching engine + preference filtering + ranking.
     results = recommend_jobs_for_candidate(
-        candidate_payload=payload.candidate.model_dump(),
-        jobs_payload=jobs,
-        preferences_payload=payload.preferences,
-        top_k=payload.top_k,
+        candidate=candidate,
+        jobs=jobs,
+        top_k=top_k,
+        preferences=prefs,
     )
 
-    return RecommendationResponse(count=len(results), recommendations=results)
+    items = []
+    for r in results:
+        full = r.get("full_result", {})
+        job  = r.get("job", {})
+        expl = full.get("explanation", {})
+        items.append({
+            "job_id":                   job.get("job_id", ""),
+            "title":                    job.get("title", ""),
+            "company":                  job.get("company", ""),
+            "location":                 job.get("location", ""),
+            "workplace_type":           job.get("workplace_type", ""),
+            "score":                    full.get("final_score", 0),
+            "fit_label":                full.get("fit_label", ""),
+            "hard_filters_passed":      full.get("hard_filters_passed", False),
+            "matched_required_skills":  expl.get("matched_required_skills", []),
+            "missing_required_skills":  expl.get("missing_required_skills", []),
+            "recommendations":          full.get("recommendations", []),
+            "source_url":               job.get("source_url", ""),
+            "employer_logo":            job.get("employer_logo", ""),
+            "description_snippet":      job.get("description_snippet", ""),
+            "date_posted":              job.get("date_posted", ""),
+        })
 
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run("src.api.main:app", host="127.0.0.1", port=8000, reload=True)
+    return RecommendationResponse(
+        count=len(items),
+        recommendations=items,
+        dataset_path="live",
+    )

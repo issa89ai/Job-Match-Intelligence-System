@@ -41,3 +41,12 @@ sources:
     base_url: "https://jsearch.p.rapidapi.com"
     request_timeout_seconds: 15
     max_results_per_query: 10       # Jobs fetched per search (max 10 on free plan)
+
+
+# Email / SMTP configuration (used for password reset emails)
+email:
+  smtp_host: "smtp.gmail.com"         # Gmail SMTP server
+  smtp_port: 587                       # TLS port
+  sender_email: "issa89.ai@gmail.com"   # The address emails are sent FROM
+  sender_password: "qfwe vjzp hkuo cixr" # Gmail App Password
+  app_base_url: "http://localhost:8501" # Streamlit app URL shown in reset links

@@ -278,3 +278,56 @@ class PreferenceResponse(BaseModel):
     preferred_domains: List[str]
     preferred_seniority: Optional[str] = None
     min_score: int
+
+
+# =========================================================
+# Forgot Password Request
+# =========================================================
+
+class ForgotPasswordRequest(BaseModel):
+    """
+    Request schema for initiating a password reset.
+    Only the registered email is required.
+    """
+    email: EmailStr
+
+
+# =========================================================
+# Reset Password Request  (uses token from email)
+# =========================================================
+
+class ResetPasswordRequest(BaseModel):
+    """
+    Request schema for resetting a password using a token.
+    """
+    token: str = Field(..., min_length=10)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 8:
+            raise ValueError("Password must be at least 8 characters.")
+        return value
+
+
+# =========================================================
+# Change Password Request  (for logged-in users)
+# =========================================================
+
+class ChangePasswordRequest(BaseModel):
+    """
+    Request schema for changing password while authenticated.
+    Requires the current password for verification.
+    """
+    current_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 8:
+            raise ValueError("New password must be at least 8 characters.")
+        return value

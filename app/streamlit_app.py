@@ -312,8 +312,13 @@ with st.sidebar:
     st.divider()
 
     if not st.session_state.is_logged_in:
-        auth_tab = st.radio("Account", ["Login", "Register"])
+        auth_tab = st.radio(
+            "Account",
+            ["Login", "Register", "Forgot Password"],
+            key="auth_tab_selection",
+        )
 
+        # ── Login ──────────────────────────────────────────
         if auth_tab == "Login":
             with st.form("login_form"):
                 email = st.text_input("Email", key="login_email")
@@ -337,7 +342,8 @@ with st.sidebar:
                 except Exception as e:
                     show_api_error(e)
 
-        else:
+        # ── Register ────────────────────────────────────────
+        elif auth_tab == "Register":
             with st.form("register_form"):
                 full_name = st.text_input("Full Name", key="register_full_name")
                 email = st.text_input("Email", key="register_email")
@@ -364,6 +370,82 @@ with st.sidebar:
                     st.rerun()
                 except Exception as e:
                     show_api_error(e)
+
+        # ── Forgot Password ─────────────────────────────────
+        else:
+            st.subheader("Reset Your Password")
+            st.write("Enter your email to receive a reset link, or paste a reset token you already received.")
+
+            # Step 1 — request reset email
+            with st.form("forgot_password_form"):
+                forgot_email = st.text_input("Registered Email", key="forgot_email")
+                send_submitted = st.form_submit_button("Send Reset Link", use_container_width=True)
+
+            if send_submitted:
+                if not forgot_email.strip():
+                    st.warning("Please enter your email address.")
+                else:
+                    try:
+                        result = api_post(
+                            "/auth/forgot-password",
+                            {"email": forgot_email.strip()},
+                        )
+                        dev_token = result.get("dev_token", "")
+                        if dev_token:
+                            # Email not configured — show the token directly
+                            st.warning(result.get("message", ""))
+                            st.info(
+                                "**Your reset token (copy this):**\n\n"
+                                f"`{dev_token}`\n\n"
+                                "Paste it into the form below to set your new password."
+                            )
+                            # Pre-fill the token field
+                            st.session_state["prefill_reset_token"] = dev_token
+                        else:
+                            st.success(result.get("message", "Reset link sent — check your inbox."))
+                    except Exception as e:
+                        show_api_error(e)
+
+            st.divider()
+
+            # Step 2 — enter token + new password
+            st.write("**Already have a reset token?** Paste it below and choose a new password.")
+
+            # Pre-fill from URL query param (?reset_token=...) or from the
+            # dev_token returned when email isn't configured
+            url_token = (
+                st.query_params.get("reset_token", "")
+                or st.session_state.get("prefill_reset_token", "")
+            )
+
+            with st.form("reset_password_form"):
+                reset_token = st.text_input(
+                    "Reset Token (from your email)",
+                    value=url_token,
+                    key="reset_token_input",
+                )
+                new_pass = st.text_input("New Password", type="password", key="reset_new_password")
+                confirm_pass = st.text_input("Confirm New Password", type="password", key="reset_confirm_password")
+                reset_submitted = st.form_submit_button("Reset Password", use_container_width=True)
+
+            if reset_submitted:
+                if not reset_token.strip():
+                    st.warning("Please paste your reset token.")
+                elif len(new_pass) < 8:
+                    st.warning("Password must be at least 8 characters.")
+                elif new_pass != confirm_pass:
+                    st.warning("Passwords do not match.")
+                else:
+                    try:
+                        result = api_post(
+                            "/auth/reset-password",
+                            {"token": reset_token.strip(), "new_password": new_pass},
+                        )
+                        st.success(result.get("message", "Password reset successfully. You can now log in."))
+                        # Clear the token from URL
+                        st.query_params.clear()
+                    except Exception as e:
+                        show_api_error(e)
 
     else:
         st.success("Logged in")
@@ -1014,3 +1096,31 @@ with page[2]:
 
     with st.expander("Preferences JSON Preview"):
         st.json(build_preferences_payload())
+
+    # ── Change Password ────────────────────────────────────
+    st.divider()
+    st.subheader("🔒 Change Password")
+    st.write("Update your account password. You must enter your current password to confirm.")
+
+    with st.form("change_password_form"):
+        current_pw = st.text_input("Current Password", type="password", key="cp_current")
+        new_pw     = st.text_input("New Password",     type="password", key="cp_new")
+        confirm_pw = st.text_input("Confirm New Password", type="password", key="cp_confirm")
+        cp_submitted = st.form_submit_button("Update Password", use_container_width=True)
+
+    if cp_submitted:
+        if not current_pw:
+            st.warning("Please enter your current password.")
+        elif len(new_pw) < 8:
+            st.warning("New password must be at least 8 characters.")
+        elif new_pw != confirm_pw:
+            st.warning("New passwords do not match.")
+        else:
+            try:
+                result = api_post(
+                    "/auth/change-password",
+                    {"current_password": current_pw, "new_password": new_pw},
+                )
+                st.success(result.get("message", "Password changed successfully."))
+            except Exception as e:
+                show_api_error(e)
