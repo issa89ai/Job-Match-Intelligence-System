@@ -188,27 +188,25 @@ class RecommendationItem(BaseModel):
     """
 
     job_id: str = ""
-
     title: str = ""
-
     company: str = ""
-
     location: str = ""
-
     workplace_type: str = ""
 
     # Final weighted score.
     score: float = 0
-
     fit_label: str = "Unknown"
-
     hard_filters_passed: bool = False
 
     matched_required_skills: List[str] = Field(default_factory=list)
-
     missing_required_skills: List[str] = Field(default_factory=list)
-
     recommendations: List[str] = Field(default_factory=list)
+
+    # Live job fields (populated when source is JSearch)
+    source_url: str = ""
+    employer_logo: str = ""
+    description_snippet: str = ""
+    date_posted: str = ""
 
     # Full detailed matching output.
     full_result: Dict[str, Any] = Field(default_factory=dict)
@@ -224,8 +222,8 @@ class RecommendationResponse(BaseModel):
     """
 
     count: int
-
     recommendations: List[RecommendationItem]
+    dataset_path: str = ""
 
 
 # =========================================================

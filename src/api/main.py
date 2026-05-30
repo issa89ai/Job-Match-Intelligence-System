@@ -1065,8 +1065,17 @@ def get_live_recommendations(payload: LiveRecommendationRequest) -> Recommendati
     3. Runs the full matching engine against the candidate profile.
     4. Returns results sorted by match score descending.
     """
-    from src.db.database import get_db as _get_db
+    try:
+        return _live_recommendations_inner(payload)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        import traceback
+        print(f"\n[/recommendations/live ERROR]\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal error: {exc}")
 
+
+def _live_recommendations_inner(payload: LiveRecommendationRequest) -> RecommendationResponse:
     client = _get_jsearch_client()
     if not client:
         raise HTTPException(
@@ -1085,39 +1094,20 @@ def get_live_recommendations(payload: LiveRecommendationRequest) -> Recommendati
     if not jobs:
         return RecommendationResponse(count=0, recommendations=[], dataset_path="live")
 
-    candidate = parse_candidate_profile(payload.candidate.dict())
     prefs = payload.preferences.dict() if payload.preferences else None
     top_k = payload.top_k or 5
 
+    # recommend_jobs_for_candidate handles parsing internally and returns
+    # flat dicts with all fields already set (score, fit_label, skills, etc.)
     results = recommend_jobs_for_candidate(
-        candidate=candidate,
-        jobs=jobs,
+        candidate_payload=payload.candidate.dict(),
+        jobs_payload=jobs,
+        preferences_payload=prefs,
         top_k=top_k,
-        preferences=prefs,
     )
 
-    items = []
-    for r in results:
-        full = r.get("full_result", {})
-        job  = r.get("job", {})
-        expl = full.get("explanation", {})
-        items.append({
-            "job_id":                   job.get("job_id", ""),
-            "title":                    job.get("title", ""),
-            "company":                  job.get("company", ""),
-            "location":                 job.get("location", ""),
-            "workplace_type":           job.get("workplace_type", ""),
-            "score":                    full.get("final_score", 0),
-            "fit_label":                full.get("fit_label", ""),
-            "hard_filters_passed":      full.get("hard_filters_passed", False),
-            "matched_required_skills":  expl.get("matched_required_skills", []),
-            "missing_required_skills":  expl.get("missing_required_skills", []),
-            "recommendations":          full.get("recommendations", []),
-            "source_url":               job.get("source_url", ""),
-            "employer_logo":            job.get("employer_logo", ""),
-            "description_snippet":      job.get("description_snippet", ""),
-            "date_posted":              job.get("date_posted", ""),
-        })
+    # Results are already flat — pass them directly to the response schema
+    items = results
 
     return RecommendationResponse(
         count=len(items),

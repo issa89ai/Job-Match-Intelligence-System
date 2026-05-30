@@ -70,9 +70,10 @@ def score_required_skills(
     required = _to_set(job_required_skills)
     candidate = _to_set(candidate_skills)
 
-    # If no required skills exist, perfect score.
+    # No required skills listed → we cannot verify a match.
+    # Return a neutral score (not perfect) to reflect the uncertainty.
     if not required:
-        return 1.0
+        return 0.65
 
     matched_count = len(required & candidate)
     total_required = len(required)
@@ -102,9 +103,9 @@ def score_preferred_skills(
     preferred = _to_set(job_preferred_skills)
     candidate = _to_set(candidate_skills)
 
-    # If no preferred skills exist, perfect score.
+    # No preferred skills → neutral uncertainty score.
     if not preferred:
-        return 1.0
+        return 0.65
 
     return len(preferred & candidate) / len(preferred)
 
@@ -218,13 +219,102 @@ def score_domain_alignment(
     job_domain_set = _to_set(job_domains)
     candidate_domain_set = _to_set(candidate_domains)
 
+    # Job has no declared domains → neutral uncertainty, not perfection.
     if not job_domain_set:
-        return 1.0
+        return 0.5
 
     if not candidate_domain_set:
         return 0.5
 
     return len(job_domain_set & candidate_domain_set) / len(job_domain_set)
+
+
+# ─────────────────────────────────────────────────────────────
+# Professional domain detection for title-level relevance
+# ─────────────────────────────────────────────────────────────
+
+# Map of broad professional domain → title/keyword signals
+_PROFESSIONAL_DOMAINS = {
+    "tech":        ["engineer", "developer", "programmer", "architect", "devops",
+                    "sre", "backend", "frontend", "fullstack", "software", "cloud",
+                    "platform", "infrastructure", "cybersecurity", "security"],
+    "data":        ["data scientist", "data analyst", "data engineer", "data science",
+                    "machine learning", "ml engineer", "ai engineer", "analytics",
+                    "business intelligence", "bi developer", "statistician",
+                    "quantitative", "nlp", "computer vision"],
+    "education":   ["teacher", "educator", "instructor", "professor", "tutor",
+                    "coach", "trainer", "principal", "curriculum", "teaching",
+                    "childcare", "daycare", "preschool", "school", "lecturer"],
+    "healthcare":  ["nurse", "doctor", "physician", "therapist", "pharmacist",
+                    "dentist", "surgeon", "medical", "clinical", "caregiver",
+                    "paramedic", "radiologist", "psychologist"],
+    "finance":     ["accountant", "auditor", "banker", "trader", "financial analyst",
+                    "actuary", "economist", "bookkeeper", "controller", "treasurer"],
+    "marketing":   ["marketer", "seo", "content writer", "copywriter", "brand",
+                    "advertising", "social media", "growth hacker", "email marketing"],
+    "sales":       ["sales", "account executive", "account manager",
+                    "business development", "customer success", "sales engineer"],
+    "hr":          ["recruiter", "hr manager", "human resources", "talent acquisition",
+                    "people operations", "hrbp"],
+    "legal":       ["lawyer", "attorney", "paralegal", "legal counsel",
+                    "compliance", "solicitor", "barrister"],
+    "operations":  ["operations manager", "supply chain", "logistics", "warehouse",
+                    "procurement", "project manager", "program manager"],
+    "design":      ["designer", "ux designer", "ui designer", "graphic designer",
+                    "product designer", "creative director", "art director"],
+    "research":    ["researcher", "biologist", "chemist", "physicist",
+                    "lab scientist", "r&d", "clinical researcher"],
+    "management":  ["manager", "director", "executive", "ceo", "cto", "cfo",
+                    "vp ", "vice president", "head of", "chief"],
+}
+
+# Domains that are compatible when combined (e.g. a tech manager is fine for a tech role)
+_COMPATIBLE_PAIRS = {
+    frozenset(["tech", "management"]),
+    frozenset(["data", "management"]),
+    frozenset(["tech", "data"]),
+    frozenset(["sales", "management"]),
+    frozenset(["operations", "management"]),
+    frozenset(["finance", "management"]),
+    frozenset(["marketing", "management"]),
+}
+
+
+def _detect_professional_domain(title: str) -> str:
+    """Return the most likely professional domain for a job/candidate title."""
+    title_lower = (title or "").lower()
+    for domain, keywords in _PROFESSIONAL_DOMAINS.items():
+        if any(kw in title_lower for kw in keywords):
+            return domain
+    return ""
+
+
+def score_title_relevance(job_title: str, candidate_title: str) -> float:
+    """
+    Detect whether the job and candidate are in the same professional domain.
+
+    Returns:
+        1.0  — same domain or compatible domains
+        0.7  — one or both titles are undetectable
+        0.1  — clearly different, incompatible domains (e.g. Teacher vs Data Scientist)
+    """
+    job_domain = _detect_professional_domain(job_title)
+    candidate_domain = _detect_professional_domain(candidate_title)
+
+    # Can't determine domain for one or both → neutral
+    if not job_domain or not candidate_domain:
+        return 0.7
+
+    # Same domain → perfect
+    if job_domain == candidate_domain:
+        return 1.0
+
+    # Compatible pair → good
+    if frozenset([job_domain, candidate_domain]) in _COMPATIBLE_PAIRS:
+        return 0.85
+
+    # Completely different domains → heavy penalty
+    return 0.1
 
 
 def compute_match_score(
@@ -282,24 +372,32 @@ def compute_match_score(
         candidate_features.get("domains", []),
     )
 
+    title_relevance_score = score_title_relevance(
+        job_features.get("title", ""),
+        candidate_features.get("current_title", ""),
+    )
+
     # Relative importance of each component.
+    # Title relevance carries 15% — it gates completely wrong-field jobs.
     weights = {
-        "required_skill_score": 0.38,
-        "preferred_skill_score": 0.12,
-        "experience_score": 0.20,
-        "education_score": 0.08,
-        "seniority_score": 0.12,
-        "domain_score": 0.10,
+        "required_skill_score":  0.33,
+        "preferred_skill_score": 0.10,
+        "experience_score":      0.18,
+        "education_score":       0.07,
+        "seniority_score":       0.10,
+        "domain_score":          0.07,
+        "title_relevance_score": 0.15,
     }
 
     # Weighted average score.
     weighted_score = (
-        required_skill_score * weights["required_skill_score"]
+        required_skill_score  * weights["required_skill_score"]
         + preferred_skill_score * weights["preferred_skill_score"]
-        + experience_score * weights["experience_score"]
-        + education_score * weights["education_score"]
-        + seniority_score * weights["seniority_score"]
-        + domain_score * weights["domain_score"]
+        + experience_score      * weights["experience_score"]
+        + education_score       * weights["education_score"]
+        + seniority_score       * weights["seniority_score"]
+        + domain_score          * weights["domain_score"]
+        + title_relevance_score * weights["title_relevance_score"]
     )
 
     # Convert to percentage.
@@ -308,9 +406,13 @@ def compute_match_score(
     # Extra penalty if required skill coverage is weak.
     if required_skill_score == 0:
         final_score = min(final_score, 45.0)
-
     elif required_skill_score < 0.5:
         final_score = min(final_score, 60.0)
+
+    # Hard cap: if title relevance detects a completely different profession,
+    # the job should never score high regardless of other components.
+    if title_relevance_score <= 0.1:
+        final_score = min(final_score, 25.0)
 
     # Convert numeric score into human-readable label.
     if final_score >= 85:
@@ -332,12 +434,13 @@ def compute_match_score(
 
         # Individual component scores for explainability.
         "component_scores": {
-            "required_skill_score": round(required_skill_score, 4),
+            "required_skill_score":  round(required_skill_score, 4),
             "preferred_skill_score": round(preferred_skill_score, 4),
-            "experience_score": round(experience_score, 4),
-            "education_score": round(education_score, 4),
-            "seniority_score": round(seniority_score, 4),
-            "domain_score": round(domain_score, 4),
+            "experience_score":      round(experience_score, 4),
+            "education_score":       round(education_score, 4),
+            "seniority_score":       round(seniority_score, 4),
+            "domain_score":          round(domain_score, 4),
+            "title_relevance_score": round(title_relevance_score, 4),
         },
 
         # Store weights for transparency/debugging.

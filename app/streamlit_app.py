@@ -860,12 +860,17 @@ with page[1]:
     )
 
     # ── Guard: profile must be loaded ──────────────────────────
-    active_profile = None
-    if st.session_state.get("active_profile_id") and st.session_state.get("all_profiles"):
-        for p in st.session_state["all_profiles"]:
-            if p.get("candidate_id") == st.session_state["active_profile_id"]:
-                active_profile = p
-                break
+    # Use saved_profile (full profile from GET /profiles/{id}) which contains
+    # skills, tools, domains etc. The all_profiles list only has lightweight
+    # summary fields and must NOT be used for matching.
+    active_profile = st.session_state.get("saved_profile") or None
+    if active_profile and active_profile.get("candidate_id") != st.session_state.get("active_profile_id"):
+        # Profile ID mismatch — re-fetch the correct full profile
+        try:
+            active_profile = api_get(f"/profiles/{st.session_state['active_profile_id']}")
+            st.session_state["saved_profile"] = active_profile
+        except Exception:
+            active_profile = None
 
     if not active_profile:
         st.info("👈 Please complete your profile in **My Profile** first, then come back here.")
@@ -974,11 +979,51 @@ with page[1]:
 
                         with title_col:
                             st.markdown(f"### {index}. {item.get('title', 'Untitled')}")
+
                             company  = item.get("company", "")
                             location = item.get("location", "")
                             wtype    = item.get("workplace_type", "")
                             meta_parts = [p for p in [company, location, wtype] if p]
                             st.caption(" · ".join(meta_parts))
+
+                            # ── Source website + date posted ──────────────
+                            source_url  = item.get("source_url", "")
+                            date_posted = item.get("date_posted", "")
+
+                            # Derive the site name from the URL domain
+                            site_name = ""
+                            if source_url:
+                                try:
+                                    from urllib.parse import urlparse
+                                    domain = urlparse(source_url).netloc.lower()
+                                    domain = domain.replace("www.", "")
+                                    site_map = {
+                                        "linkedin.com":    "LinkedIn",
+                                        "indeed.com":      "Indeed",
+                                        "glassdoor.com":   "Glassdoor",
+                                        "ziprecruiter.com":"ZipRecruiter",
+                                        "monster.com":     "Monster",
+                                        "dice.com":        "Dice",
+                                        "simplyhired.com": "SimplyHired",
+                                        "careerbuilder.com":"CareerBuilder",
+                                    }
+                                    # Match on partial domain too (e.g. ca.linkedin.com)
+                                    for key, label in site_map.items():
+                                        if key in domain:
+                                            site_name = label
+                                            break
+                                    if not site_name:
+                                        site_name = domain.split(".")[0].capitalize()
+                                except Exception:
+                                    pass
+
+                            badge_parts = []
+                            if site_name:
+                                badge_parts.append(f"🌐 **{site_name}**")
+                            if date_posted:
+                                badge_parts.append(f"📅 {date_posted}")
+                            if badge_parts:
+                                st.markdown("  ·  ".join(badge_parts))
 
                             # Description snippet if available
                             snippet = item.get("description_snippet", "")
@@ -988,7 +1033,6 @@ with page[1]:
                         with score_col:
                             score = item.get("score", 0)
                             fit   = item.get("fit_label", "Unknown")
-                            # Colour the score metric by quality
                             if score >= 75:
                                 st.success(f"**{score}%** match")
                             elif score >= 50:
@@ -1027,9 +1071,8 @@ with page[1]:
                                     st.write(f"• {rec}")
 
                         # Apply button
-                        apply_link = item.get("source_url", "")
-                        if apply_link:
-                            st.link_button("🚀 Apply on Original Website", apply_link)
+                        if source_url:
+                            st.link_button("🚀 Apply on Original Website", source_url)
 
 
 # ============================================================
@@ -1119,8 +1162,11 @@ with page[2]:
             try:
                 result = api_post(
                     "/auth/change-password",
-                    {"current_password": current_pw, "new_password": new_pw},
+                    {
+                        "current_password": current_pw,
+                        "new_password": new_pw,
+                    },
                 )
-                st.success(result.get("message", "Password changed successfully."))
+                st.success("Password changed successfully.")
             except Exception as e:
                 show_api_error(e)
