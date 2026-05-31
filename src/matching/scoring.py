@@ -64,32 +64,42 @@ def score_required_skills(
     candidate_skills: List[str],
 ) -> float:
     """
-    Score required skill coverage.
+    Score required skill coverage using a smooth tiered curve.
+
+    Coverage band → score band (transparent, no hidden multipliers):
+      0%           → 0.00  (no match)
+      0–20%        → 0.00–0.12  (very weak)
+      20–40%       → 0.12–0.32  (weak)
+      40–60%       → 0.32–0.57  (partial)
+      60–80%       → 0.57–0.85  (good)
+      80–100%      → 0.85–1.00  (strong / perfect)
     """
 
-    required = _to_set(job_required_skills)
+    required  = _to_set(job_required_skills)
     candidate = _to_set(candidate_skills)
 
-    # No required skills listed → we cannot verify a match.
-    # Return a neutral score (not perfect) to reflect the uncertainty.
+    # No required skills listed → neutral uncertainty score.
     if not required:
         return 0.65
 
-    matched_count = len(required & candidate)
+    matched_count  = len(required & candidate)
     total_required = len(required)
+    coverage       = matched_count / total_required   # 0.0 → 1.0
 
-    # Basic coverage ratio.
-    base_score = matched_count / total_required
-
-    # Severe penalty if candidate matches none.
+    # Zero match → no score.
     if matched_count == 0:
         return 0.0
 
-    # Additional penalty if coverage is weak.
-    if base_score < 0.5:
-        return base_score * 0.75
-
-    return base_score
+    # Smooth tiered curve — each band maps linearly within its range.
+    if coverage <= 0.20:
+        return coverage * 0.60                                    # 0–20%  → 0.00–0.12
+    if coverage <= 0.40:
+        return 0.12 + (coverage - 0.20) * 1.00                   # 20–40% → 0.12–0.32
+    if coverage <= 0.60:
+        return 0.32 + (coverage - 0.40) * 1.25                   # 40–60% → 0.32–0.57
+    if coverage <= 0.80:
+        return 0.57 + (coverage - 0.60) * 1.40                   # 60–80% → 0.57–0.85
+    return 0.85 + (coverage - 0.80) * 0.75                       # 80–100%→ 0.85–1.00
 
 
 def score_preferred_skills(
@@ -250,8 +260,9 @@ _PROFESSIONAL_DOMAINS = {
                     "paramedic", "radiologist", "psychologist"],
     "finance":     ["accountant", "auditor", "banker", "trader", "financial analyst",
                     "actuary", "economist", "bookkeeper", "controller", "treasurer"],
-    "marketing":   ["marketer", "seo", "content writer", "copywriter", "brand",
-                    "advertising", "social media", "growth hacker", "email marketing"],
+    "marketing":   ["marketing", "marketer", "seo", "content writer", "copywriter",
+                    "brand", "advertising", "social media", "growth hacker",
+                    "email marketing", "campaign", "digital marketing"],
     "sales":       ["sales", "account executive", "account manager",
                     "business development", "customer success", "sales engineer"],
     "hr":          ["recruiter", "hr manager", "human resources", "talent acquisition",
@@ -280,8 +291,52 @@ _COMPATIBLE_PAIRS = {
 }
 
 
-def _detect_professional_domain(title: str) -> str:
-    """Return the most likely professional domain for a job/candidate title."""
+# ── Skill-level domain signals ──────────────────────────────────────────────
+# Maps domain → skills that strongly signal that profession.
+# Used as a FALLBACK when the job/candidate title is not in _PROFESSIONAL_DOMAINS.
+_DOMAIN_SKILL_SIGNALS: Dict[str, List[str]] = {
+    "tech":       ["python", "java", "javascript", "typescript", "c++", "rust", "go",
+                   "kubernetes", "terraform", "aws", "azure", "gcp", "docker",
+                   "linux", "bash", "api", "microservices", "ci/cd"],
+    "data":       ["machine learning", "deep learning", "tensorflow", "pytorch", "keras",
+                   "scikit-learn", "pandas", "numpy", "spark", "hadoop", "sql",
+                   "data science", "nlp", "statistics", "mlops", "feature engineering",
+                   "data visualization", "tableau", "power bi"],
+    "marketing":  ["seo", "sem", "google ads", "facebook ads", "social media",
+                   "content marketing", "email marketing", "hubspot", "mailchimp",
+                   "google analytics", "copywriting", "brand strategy", "ppc",
+                   "affiliate marketing", "growth hacking", "a/b testing"],
+    "finance":    ["financial modeling", "excel", "accounting", "bloomberg", "valuation",
+                   "dcf", "gaap", "ifrs", "quickbooks", "sap", "auditing",
+                   "budgeting", "forecasting", "risk management", "trading"],
+    "healthcare": ["ehr", "emr", "epic", "patient care", "clinical trials", "icd",
+                   "hipaa", "medical coding", "nursing", "pharmacology", "diagnosis"],
+    "education":  ["curriculum", "lesson planning", "classroom management",
+                   "student assessment", "e-learning", "lms", "pedagogy",
+                   "child development", "special education", "tutoring"],
+    "design":     ["figma", "sketch", "adobe xd", "photoshop", "illustrator",
+                   "ui design", "ux research", "wireframing", "prototyping",
+                   "user testing", "design systems", "typography"],
+    "hr":         ["recruitment", "talent acquisition", "onboarding", "hris",
+                   "workday", "bamboohr", "performance management", "payroll",
+                   "employee relations", "succession planning", "dei"],
+    "sales":      ["salesforce", "crm", "cold calling", "lead generation", "pipeline",
+                   "account management", "quota", "b2b", "b2c", "negotiation",
+                   "upselling", "customer success"],
+    "legal":      ["contract review", "litigation", "due diligence", "compliance",
+                   "regulatory", "gdpr", "intellectual property", "legal research",
+                   "case management", "employment law"],
+    "operations": ["supply chain", "logistics", "erp", "sap", "lean", "six sigma",
+                   "procurement", "inventory management", "warehouse management",
+                   "process improvement", "kpi"],
+    "research":   ["r", "spss", "stata", "matlab", "literature review",
+                   "hypothesis testing", "experimental design", "peer review",
+                   "genomics", "proteomics", "lab techniques"],
+}
+
+
+def _detect_domain_from_title(title: str) -> str:
+    """Detect professional domain from job/candidate title keywords."""
     title_lower = (title or "").lower()
     for domain, keywords in _PROFESSIONAL_DOMAINS.items():
         if any(kw in title_lower for kw in keywords):
@@ -289,19 +344,60 @@ def _detect_professional_domain(title: str) -> str:
     return ""
 
 
-def score_title_relevance(job_title: str, candidate_title: str) -> float:
+def _detect_domain_from_skills(skills: List[str]) -> str:
+    """
+    Fallback domain inference from the candidate/job skill list.
+    Returns the domain whose skill signals have the highest overlap.
+    Fires only when title-based detection returned nothing.
+    """
+    if not skills:
+        return ""
+
+    skill_set = {str(s).strip().lower() for s in skills}
+    best_domain = ""
+    best_count  = 0
+
+    for domain, signals in _DOMAIN_SKILL_SIGNALS.items():
+        count = sum(1 for sig in signals if sig in skill_set)
+        if count > best_count:
+            best_count  = count
+            best_domain = domain
+
+    # Require at least 2 signal matches to avoid false positives
+    return best_domain if best_count >= 2 else ""
+
+
+def _detect_professional_domain(title: str, skills: List[str] = None) -> str:
+    """
+    Detect professional domain using title first, skills as fallback.
+    This makes domain detection robust to unseen or unusual job titles.
+    """
+    domain = _detect_domain_from_title(title)
+    if domain:
+        return domain
+    # Title unrecognised — fall back to skill signals
+    return _detect_domain_from_skills(skills or [])
+
+
+def score_title_relevance(
+    job_title: str,
+    candidate_title: str,
+    job_skills: List[str] = None,
+    candidate_skills: List[str] = None,
+) -> float:
     """
     Detect whether the job and candidate are in the same professional domain.
+    Uses title as primary signal, skills as fallback when title is unrecognised.
 
     Returns:
         1.0  — same domain or compatible domains
-        0.7  — one or both titles are undetectable
-        0.1  — clearly different, incompatible domains (e.g. Teacher vs Data Scientist)
+        0.7  — domain still undetectable after both signals
+        0.1  — clearly different, incompatible domains
     """
-    job_domain = _detect_professional_domain(job_title)
-    candidate_domain = _detect_professional_domain(candidate_title)
+    job_domain       = _detect_professional_domain(job_title,       job_skills or [])
+    candidate_domain = _detect_professional_domain(candidate_title, candidate_skills or [])
 
-    # Can't determine domain for one or both → neutral
+    # Still can't determine domain for one or both → neutral
     if not job_domain or not candidate_domain:
         return 0.7
 
@@ -373,8 +469,10 @@ def compute_match_score(
     )
 
     title_relevance_score = score_title_relevance(
-        job_features.get("title", ""),
-        candidate_features.get("current_title", ""),
+        job_title=job_features.get("title", ""),
+        candidate_title=candidate_features.get("current_title", ""),
+        job_skills=job_features.get("required_skills", []),
+        candidate_skills=candidate_features.get("skills", []),
     )
 
     # Relative importance of each component.
@@ -403,11 +501,16 @@ def compute_match_score(
     # Convert to percentage.
     final_score = round(weighted_score * 100, 2)
 
-    # Extra penalty if required skill coverage is weak.
+    # Graduated cap based on required skill coverage — reflects reality better
+    # than a single blunt cutoff (e.g. 3/24 and 11/24 should NOT both cap at 60).
     if required_skill_score == 0:
-        final_score = min(final_score, 45.0)
-    elif required_skill_score < 0.5:
-        final_score = min(final_score, 60.0)
+        final_score = min(final_score, 45.0)   # zero match → max 45%
+    elif required_skill_score < 0.20:
+        final_score = min(final_score, 55.0)   # <20% coverage → max 55%
+    elif required_skill_score < 0.30:
+        final_score = min(final_score, 63.0)   # <30% coverage → max 63%
+    elif required_skill_score < 0.50:
+        final_score = min(final_score, 72.0)   # <50% coverage → max 72%
 
     # Hard cap: if title relevance detects a completely different profession,
     # the job should never score high regardless of other components.
