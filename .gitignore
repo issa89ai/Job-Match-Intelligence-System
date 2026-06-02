@@ -27,3 +27,13 @@ data/curated/
 data/evaluation/
 *.sqlite3
 *.db
+# Streamlit secrets (never commit real secrets)
+.streamlit/secrets.toml
+
+# SQLite database
+*.db
+*.sqlite3
+
+# API keys / env
+.env
+.env.*

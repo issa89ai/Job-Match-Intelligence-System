@@ -5,6 +5,17 @@ from typing import Any, Dict, List, Optional
 import requests
 import streamlit as st
 
+# ── Default API URL: Streamlit secrets → env var → localhost ──
+def _default_api_url() -> str:
+    try:
+        url = st.secrets.get("API_URL", "")
+        if url:
+            return url.rstrip("/")
+    except Exception:
+        pass
+    import os
+    return os.environ.get("API_URL", "http://127.0.0.1:8000")
+
 
 # ============================================================
 # Page setup
@@ -33,7 +44,7 @@ def join_list(values: Optional[List[str]]) -> str:
 
 def init_state() -> None:
     defaults = {
-        "api_url": "http://127.0.0.1:8000",
+        "api_url": _default_api_url(),
         "token": "",
         "user_email": "",
         "full_name": "",
