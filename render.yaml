@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: job-match-api
+    runtime: python
+    buildCommand: pip install -r requirements-backend.txt
+    startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JSEARCH_API_KEY
+        sync: false          # you'll paste this in the Render dashboard
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_SENDER_EMAIL
+        sync: false          # paste in Render dashboard
+      - key: SMTP_SENDER_PASSWORD
+        sync: false          # paste in Render dashboard
+      - key: APP_BASE_URL
+        sync: false          # paste your Streamlit Cloud URL after deployment

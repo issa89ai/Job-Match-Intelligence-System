@@ -57,6 +57,372 @@ def init_state() -> None:
             st.session_state[key] = value
 
 
+
+# ============================================================
+# Custom CSS — Dark professional theme
+# ============================================================
+def inject_css() -> None:
+    st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ══════════════════════════════════════════════
+   BASE — dark canvas, colorful everything inside
+   ══════════════════════════════════════════════ */
+* { font-family: 'Inter', sans-serif !important; }
+
+.stApp { background-color: #0a0e1a !important; color: #dde3f0; }
+section[data-testid="stMain"] > div { background-color: #0a0e1a !important; }
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0f1322 0%, #111827 100%) !important;
+    border-right: 1px solid rgba(99,102,241,0.25) !important;
+}
+[data-testid="stSidebar"] * { color: #cbd5e1 !important; }
+
+/* ── Header bar ── */
+header[data-testid="stHeader"] {
+    background-color: #0a0e1a !important;
+    border-bottom: 1px solid rgba(99,102,241,0.2);
+}
+
+/* ── App title ── */
+h1 {
+    background: linear-gradient(135deg, #a78bfa, #60a5fa, #34d399) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    font-weight: 800 !important;
+    font-size: 2rem !important;
+}
+h2 { color: #e2e8f0 !important; font-weight: 700 !important; }
+h3 { color: #cbd5e1 !important; font-weight: 600 !important; }
+p, li, label { color: #94a3b8; }
+.stCaption, small { color: #64748b !important; }
+hr { border: none !important; border-top: 1px solid rgba(99,102,241,0.2) !important; }
+
+/* ══════════════════════════════════════
+   TABS — pill style, gradient active
+   ══════════════════════════════════════ */
+.stTabs [data-baseweb="tab-list"] {
+    background: rgba(15,19,35,0.8);
+    border-radius: 14px;
+    padding: 5px 7px;
+    gap: 4px;
+    border: 1px solid rgba(99,102,241,0.2);
+    backdrop-filter: blur(8px);
+}
+.stTabs [data-baseweb="tab"] {
+    background-color: transparent !important;
+    color: #64748b !important;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 8px 22px;
+    transition: all 0.2s;
+    letter-spacing: 0.2px;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    color: #a78bfa !important;
+    background: rgba(167,139,250,0.08) !important;
+}
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(99,102,241,0.45);
+}
+
+/* ══════════════════════════════════════
+   BUTTONS
+   ══════════════════════════════════════ */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.3px;
+    padding: 10px 24px !important;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 10px rgba(99,102,241,0.3);
+}
+.stButton > button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+    box-shadow: 0 6px 20px rgba(99,102,241,0.5);
+    transform: translateY(-2px);
+}
+.stButton > button:not([kind="primary"]) {
+    background: rgba(15,19,35,0.9) !important;
+    color: #94a3b8 !important;
+    border: 1px solid rgba(99,102,241,0.25) !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s;
+}
+.stButton > button:not([kind="primary"]):hover {
+    border-color: #a78bfa !important;
+    color: #a78bfa !important;
+    background: rgba(167,139,250,0.08) !important;
+    transform: translateY(-1px);
+}
+.stLinkButton a {
+    background: linear-gradient(135deg, #059669, #10b981) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    padding: 10px 22px !important;
+    box-shadow: 0 2px 10px rgba(16,185,129,0.3);
+}
+
+/* ══════════════════════════════════════
+   INPUTS
+   ══════════════════════════════════════ */
+.stTextInput input, .stTextArea textarea, .stNumberInput input {
+    background: rgba(15,19,35,0.9) !important;
+    border: 1px solid rgba(99,102,241,0.25) !important;
+    color: #e2e8f0 !important;
+    border-radius: 10px !important;
+    transition: all 0.2s;
+}
+.stTextInput input:focus, .stTextArea textarea:focus {
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 0 3px rgba(139,92,246,0.2) !important;
+}
+.stSelectbox > div > div {
+    background: rgba(15,19,35,0.9) !important;
+    border: 1px solid rgba(99,102,241,0.25) !important;
+    color: #e2e8f0 !important;
+    border-radius: 10px !important;
+}
+
+/* ══════════════════════════════════════
+   METRICS — colourful gradient cards
+   ══════════════════════════════════════ */
+[data-testid="metric-container"] {
+    background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.06)) !important;
+    border: 1px solid rgba(99,102,241,0.3) !important;
+    border-radius: 14px !important;
+    padding: 18px 20px !important;
+    position: relative;
+    overflow: hidden;
+}
+[data-testid="metric-container"]::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa);
+    border-radius: 14px 14px 0 0;
+}
+[data-testid="metric-container"] label { color: #64748b !important; font-size: 11px !important; font-weight: 600 !important; text-transform: uppercase; letter-spacing: 0.6px; }
+[data-testid="metric-container"] [data-testid="stMetricValue"] { color: #e2e8f0 !important; font-size: 24px !important; font-weight: 800 !important; }
+
+/* ══════════════════════════════════════
+   PROGRESS BAR — rainbow gradient
+   ══════════════════════════════════════ */
+.stProgress > div > div { background: rgba(15,19,35,0.8); border-radius: 8px; height: 8px !important; }
+.stProgress > div > div > div {
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899, #f97316, #eab308, #22c55e);
+    border-radius: 8px;
+    transition: width 0.5s ease;
+}
+
+/* ══════════════════════════════════════
+   CONTAINERS
+   ══════════════════════════════════════ */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: rgba(15,19,35,0.7) !important;
+    border: 1px solid rgba(99,102,241,0.2) !important;
+    border-radius: 14px !important;
+    backdrop-filter: blur(6px);
+}
+.streamlit-expanderHeader {
+    background: rgba(15,19,35,0.8) !important;
+    border: 1px solid rgba(99,102,241,0.2) !important;
+    border-radius: 10px !important;
+    color: #94a3b8 !important;
+    font-weight: 600 !important;
+}
+.streamlit-expanderContent {
+    background: rgba(10,14,26,0.9) !important;
+    border: 1px solid rgba(99,102,241,0.15) !important;
+    border-top: none !important;
+}
+
+/* ══════════════════════════════════════
+   ALERTS
+   ══════════════════════════════════════ */
+.stSuccess {
+    background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(5,150,105,0.06)) !important;
+    border: 1px solid rgba(16,185,129,0.4) !important;
+    border-left: 4px solid #10b981 !important;
+    color: #6ee7b7 !important;
+    border-radius: 10px !important;
+}
+.stWarning {
+    background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(217,119,6,0.06)) !important;
+    border: 1px solid rgba(245,158,11,0.4) !important;
+    border-left: 4px solid #f59e0b !important;
+    color: #fcd34d !important;
+    border-radius: 10px !important;
+}
+.stError {
+    background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(220,38,38,0.06)) !important;
+    border: 1px solid rgba(239,68,68,0.4) !important;
+    border-left: 4px solid #ef4444 !important;
+    color: #fca5a5 !important;
+    border-radius: 10px !important;
+}
+.stInfo {
+    background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(59,130,246,0.06)) !important;
+    border: 1px solid rgba(99,102,241,0.4) !important;
+    border-left: 4px solid #6366f1 !important;
+    color: #a5b4fc !important;
+    border-radius: 10px !important;
+}
+
+/* ══════════════════════════════════════
+   FILE UPLOADER
+   ══════════════════════════════════════ */
+[data-testid="stFileUploader"] {
+    background: rgba(99,102,241,0.04) !important;
+    border: 2px dashed rgba(99,102,241,0.35) !important;
+    border-radius: 14px !important;
+    transition: all 0.2s;
+}
+[data-testid="stFileUploader"]:hover {
+    border-color: rgba(139,92,246,0.6) !important;
+    background: rgba(99,102,241,0.08) !important;
+}
+
+/* ══════════════════════════════════════
+   SLIDER
+   ══════════════════════════════════════ */
+.stSlider [data-baseweb="slider"] div[role="slider"] {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    border: 2px solid #a78bfa !important;
+    box-shadow: 0 0 10px rgba(99,102,241,0.5) !important;
+}
+
+/* ══════════════════════════════════════════════════
+   JOB CARDS — the star of the show
+   ══════════════════════════════════════════════════ */
+.jm-card {
+    background: linear-gradient(145deg, #0f1729 0%, #131d2e 60%, #0f1322 100%);
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 18px;
+    padding: 24px 26px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+/* Subtle top accent stripe — changes colour per card via nth-child */
+.jm-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+    border-radius: 18px 18px 0 0;
+}
+.jm-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(139,92,246,0.5);
+    box-shadow: 0 8px 32px rgba(99,102,241,0.2), 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* ── Score ring ── */
+.score-ring {
+    width: 84px; height: 84px;
+    border-radius: 50%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border: 4px solid;
+    font-weight: 800; font-size: 21px;
+    flex-shrink: 0;
+    position: relative;
+}
+.score-ring::after {
+    content: '';
+    position: absolute; inset: -6px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background: inherit;
+    background-clip: border-box;
+    opacity: 0.2;
+    filter: blur(4px);
+}
+
+/* ── Skill chips ── */
+.chip-green {
+    display: inline-block;
+    background: linear-gradient(135deg, rgba(16,185,129,0.18), rgba(5,150,105,0.1));
+    color: #6ee7b7;
+    border: 1px solid rgba(16,185,129,0.4);
+    font-size: 0.72rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px;
+    letter-spacing: 0.2px;
+}
+.chip-red {
+    display: inline-block;
+    background: linear-gradient(135deg, rgba(239,68,68,0.18), rgba(220,38,38,0.1));
+    color: #fca5a5;
+    border: 1px solid rgba(239,68,68,0.4);
+    font-size: 0.72rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px;
+    letter-spacing: 0.2px;
+}
+
+/* ── Hard filter banners ── */
+.hf-pass {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.08));
+    border: 1px solid rgba(16,185,129,0.4);
+    border-radius: 8px; padding: 6px 14px;
+    font-size: 0.8rem; font-weight: 700; color: #6ee7b7;
+    margin: 8px 0;
+}
+.hf-fail {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(217,119,6,0.08));
+    border: 1px solid rgba(245,158,11,0.4);
+    border-radius: 8px; padding: 6px 14px;
+    font-size: 0.8rem; font-weight: 700; color: #fcd34d;
+    margin: 8px 0;
+}
+
+/* ── Apply button ── */
+.apply-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #ffffff !important;
+    text-decoration: none !important;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 10px 26px;
+    border-radius: 10px;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 12px rgba(16,185,129,0.35);
+}
+.apply-btn:hover {
+    background: linear-gradient(135deg, #047857, #059669) !important;
+    box-shadow: 0 6px 20px rgba(16,185,129,0.5);
+    transform: translateY(-2px);
+    color: #ffffff !important;
+}
+
+/* ── Divider inside cards ── */
+.card-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(99,102,241,0.25), transparent);
+    margin: 14px 0;
+}
+
+/* ── Checkbox ── */
+.stCheckbox > label { color: #94a3b8 !important; }
+</style>
+""", unsafe_allow_html=True)
+
 def get_headers() -> Dict[str, str]:
     headers = {"Content-Type": "application/json"}
 
@@ -259,40 +625,62 @@ def display_recommendations(result: Dict[str, Any]) -> None:
     st.success(f"Found {len(recommendations)} recommended jobs.")
 
     for index, item in enumerate(recommendations, start=1):
-        with st.container(border=True):
-            st.markdown(f"### {index}. {item.get('title', 'Untitled Job')}")
-            st.write(f"**Company:** {item.get('company', '')}")
-            st.write(f"**Location:** {item.get('location', '')}")
-            st.write(f"**Workplace Type:** {item.get('workplace_type', '')}")
+        score = item.get("score", 0)
+        fit = item.get("fit_label", "Unknown")
+        passed = item.get("hard_filters_passed", False)
+        matched = item.get("matched_required_skills", [])
+        missing = item.get("missing_required_skills", [])
+        source_url = item.get("source_url", "")
+        if score >= 75:
+            ring_color = "#10b981"; ring_glow = "rgba(16,185,129,0.3)"
+        elif score >= 50:
+            ring_color = "#f59e0b"; ring_glow = "rgba(245,158,11,0.3)"
+        else:
+            ring_color = "#ef4444"; ring_glow = "rgba(239,68,68,0.3)"
+        hf_html = '<span class="hf-pass">✅ Meets requirements</span>' if passed else '<span class="hf-fail">⚠️ Partial match</span>'
+        matched_chips = " ".join(f'<span class="chip-green">{s}</span>' for s in matched) if matched else "<em style='color:#475569'>None</em>"
+        missing_chips = " ".join(f'<span class="chip-red">{s}</span>' for s in missing) if missing else '<span style="color:#10b981;font-size:0.85rem;font-weight:600;">🎉 None — perfect fit!</span>'
+        apply_btn = f'<a href="{source_url}" target="_blank" class="apply-btn">🚀 Apply Now</a>' if source_url else ""
+        meta_str = "  ·  ".join(p for p in [item.get("company",""), item.get("location",""), item.get("workplace_type","")] if p)
+        card_html = (
+            '<div class="jm-card">'
+            '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">'
+            '<div style="flex:1;min-width:0;">'
+            f'<div style="font-size:1.1rem;font-weight:800;color:#e2e8f0;margin-bottom:5px;line-height:1.3;">'
+            f'<span style="color:#6366f1;font-size:0.85rem;font-weight:700;margin-right:8px;">#{index}</span>'
+            f'{item.get("title","Untitled Job")}</div>'
+            f'<div style="font-size:0.83rem;color:#64748b;margin-bottom:10px;">{meta_str}</div>'
+            f'{hf_html}'
+            '</div>'
+            f'<div class="score-ring" style="border-color:{ring_color};color:{ring_color};background:rgba(0,0,0,0.3);box-shadow:0 0 18px {ring_glow};flex-shrink:0;">'
+            f'{score}%<br><span style="font-size:0.58rem;font-weight:600;color:#64748b;text-transform:uppercase;">{fit}</span>'
+            '</div></div>'
+            '<div class="card-divider"></div>'
+            '<div style="display:flex;gap:20px;flex-wrap:wrap;">'
+            '<div style="flex:1;min-width:180px;">'
+            '<div style="font-size:0.72rem;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;">✔ Matched Skills</div>'
+            f'<div style="line-height:2;">{matched_chips}</div></div>'
+            '<div style="flex:1;min-width:180px;">'
+            '<div style="font-size:0.72rem;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;">✘ Missing Skills</div>'
+            f'<div style="line-height:2;">{missing_chips}</div></div>'
+            '</div>'
+            + ('<div class="card-divider"></div><div>' + apply_btn + '</div>' if apply_btn else "")
+            + '</div>'
+        )
+        st.markdown(card_html, unsafe_allow_html=True)
 
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Score", f"{item.get('score', 0)}%")
-            c2.metric("Fit", item.get("fit_label", "Unknown"))
-            c3.metric(
-                "Hard Filters",
-                "Passed" if item.get("hard_filters_passed") else "Not Passed",
-            )
-
-            matched = item.get("matched_required_skills", [])
-            missing = item.get("missing_required_skills", [])
-
-            st.write("**Matched Required Skills:**", ", ".join(matched) if matched else "None")
-            st.write("**Missing Required Skills:**", ", ".join(missing) if missing else "None")
-
-            recs = item.get("recommendations", [])
-            if recs:
-                st.write("**Improvement Suggestions:**")
+        recs = item.get("recommendations", [])
+        if recs:
+            with st.expander("💡 How to improve your match"):
                 for rec in recs:
-                    st.write(f"- {rec}")
-
-            with st.expander("Full Result"):
-                st.json(item.get("full_result", item))
+                    st.write(f"• {rec}")
 
 
 # ============================================================
 # App start
 # ============================================================
 init_state()
+inject_css()
 
 st.title("💼 Job Match Intelligence System")
 st.caption("Candidate profile, job matching, and dataset-based recommendations.")
@@ -974,105 +1362,110 @@ with page[1]:
                 st.subheader(f"Top {len(recommendations)} Jobs Ranked by Fit")
 
                 for index, item in enumerate(recommendations, start=1):
-                    with st.container(border=True):
-                        title_col, score_col = st.columns([3, 1])
+                    score = item.get("score", 0)
+                    fit   = item.get("fit_label", "Unknown")
+                    passed = item.get("hard_filters_passed", False)
+                    matched = item.get("matched_required_skills", [])
+                    missing = item.get("missing_required_skills", [])
+                    source_url  = item.get("source_url", "")
+                    date_posted = item.get("date_posted", "")
+                    snippet     = item.get("description_snippet", "")
 
-                        with title_col:
-                            st.markdown(f"### {index}. {item.get('title', 'Untitled')}")
+                    # Site name from URL
+                    site_name = ""
+                    if source_url:
+                        try:
+                            from urllib.parse import urlparse
+                            _domain = urlparse(source_url).netloc.lower().replace("www.", "")
+                            _site_map = {
+                                "linkedin.com": "LinkedIn", "indeed.com": "Indeed",
+                                "glassdoor.com": "Glassdoor", "ziprecruiter.com": "ZipRecruiter",
+                                "monster.com": "Monster", "dice.com": "Dice",
+                                "simplyhired.com": "SimplyHired", "careerbuilder.com": "CareerBuilder",
+                            }
+                            for _k, _v in _site_map.items():
+                                if _k in _domain:
+                                    site_name = _v
+                                    break
+                            if not site_name:
+                                site_name = _domain.split(".")[0].capitalize()
+                        except Exception:
+                            pass
 
-                            company  = item.get("company", "")
-                            location = item.get("location", "")
-                            wtype    = item.get("workplace_type", "")
-                            meta_parts = [p for p in [company, location, wtype] if p]
-                            st.caption(" · ".join(meta_parts))
+                    if score >= 75:
+                        ring_color = "#2ea043"
+                    elif score >= 50:
+                        ring_color = "#d29922"
+                    else:
+                        ring_color = "#da3633"
 
-                            # ── Source website + date posted ──────────────
-                            source_url  = item.get("source_url", "")
-                            date_posted = item.get("date_posted", "")
+                    hf_html = '<span class="hf-pass">✅ Meets all requirements</span>' if passed else '<span class="hf-fail">⚠️ Partial match</span>'
+                    matched_chips = " ".join(f'<span class="chip-green">{s}</span>' for s in matched) if matched else "<em style='color:#8b949e'>None</em>"
+                    missing_chips = " ".join(f'<span class="chip-red">{s}</span>' for s in missing) if missing else '<span style="color:#2ea043;font-size:0.85rem">None — great fit! 🎉</span>'
+                    meta_parts = [p for p in [item.get("company",""), item.get("location",""), item.get("workplace_type","")] if p]
+                    meta_str = "  ·  ".join(meta_parts)
+                    badge_str = ""
+                    if site_name:
+                        badge_str += f'<span style="background:#21262d;color:#58a6ff;padding:2px 8px;border-radius:4px;font-size:0.75rem;margin-right:6px;">🌐 {site_name}</span>'
+                    if date_posted:
+                        badge_str += f'<span style="color:#8b949e;font-size:0.8rem;">📅 {date_posted}</span>'
+                    snippet_html = f'<div style="color:#8b949e;font-size:0.85rem;margin-top:8px;line-height:1.5;">{snippet[:280]}{"…" if len(snippet)>280 else ""}</div>' if snippet else ""
+                    apply_btn = f'<a href="{source_url}" target="_blank" class="apply-btn">🚀 Apply Now</a>' if source_url else ""
 
-                            # Derive the site name from the URL domain
-                            site_name = ""
-                            if source_url:
-                                try:
-                                    from urllib.parse import urlparse
-                                    domain = urlparse(source_url).netloc.lower()
-                                    domain = domain.replace("www.", "")
-                                    site_map = {
-                                        "linkedin.com":    "LinkedIn",
-                                        "indeed.com":      "Indeed",
-                                        "glassdoor.com":   "Glassdoor",
-                                        "ziprecruiter.com":"ZipRecruiter",
-                                        "monster.com":     "Monster",
-                                        "dice.com":        "Dice",
-                                        "simplyhired.com": "SimplyHired",
-                                        "careerbuilder.com":"CareerBuilder",
-                                    }
-                                    # Match on partial domain too (e.g. ca.linkedin.com)
-                                    for key, label in site_map.items():
-                                        if key in domain:
-                                            site_name = label
-                                            break
-                                    if not site_name:
-                                        site_name = domain.split(".")[0].capitalize()
-                                except Exception:
-                                    pass
+                    if score >= 75:
+                        ring_color = "#10b981"; ring_glow = "rgba(16,185,129,0.3)"
+                    elif score >= 50:
+                        ring_color = "#f59e0b"; ring_glow = "rgba(245,158,11,0.3)"
+                    else:
+                        ring_color = "#ef4444"; ring_glow = "rgba(239,68,68,0.3)"
 
-                            badge_parts = []
-                            if site_name:
-                                badge_parts.append(f"🌐 **{site_name}**")
-                            if date_posted:
-                                badge_parts.append(f"📅 {date_posted}")
-                            if badge_parts:
-                                st.markdown("  ·  ".join(badge_parts))
+                    hf_html = '<span class="hf-pass">✅ Meets all requirements</span>' if passed else '<span class="hf-fail">⚠️ Partial match</span>'
+                    matched_chips = " ".join(f'<span class="chip-green">{s}</span>' for s in matched) if matched else "<em style='color:#475569'>None</em>"
+                    missing_chips = " ".join(f'<span class="chip-red">{s}</span>' for s in missing) if missing else '<span style="color:#10b981;font-size:0.85rem;font-weight:600;">🎉 None — perfect fit!</span>'
+                    meta_parts = [p for p in [item.get("company",""), item.get("location",""), item.get("workplace_type","")] if p]
+                    meta_str = "  ·  ".join(meta_parts)
+                    badge_str = ""
+                    if site_name:
+                        badge_str += f'<span style="background:rgba(99,102,241,0.15);color:#a5b4fc;padding:2px 9px;border-radius:20px;font-size:0.72rem;font-weight:700;border:1px solid rgba(99,102,241,0.3);margin-right:6px;">🌐 {site_name}</span>'
+                    if date_posted:
+                        badge_str += f'<span style="color:#64748b;font-size:0.78rem;">📅 {date_posted}</span>'
+                    snippet_html = f'<div style="color:#64748b;font-size:0.83rem;margin-top:8px;line-height:1.55;">{snippet[:280]}{"…" if len(snippet)>280 else ""}</div>' if snippet else ""
+                    apply_btn = f'<a href="{source_url}" target="_blank" class="apply-btn">🚀 Apply Now</a>' if source_url else ""
 
-                            # Description snippet if available
-                            snippet = item.get("description_snippet", "")
-                            if snippet:
-                                st.write(snippet[:300] + ("…" if len(snippet) > 300 else ""))
+                    card_html = (
+                        '<div class="jm-card">'
+                        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">' 
+                        '<div style="flex:1;min-width:0;">' 
+                        f'<div style="font-size:1.15rem;font-weight:800;color:#e2e8f0;margin-bottom:5px;line-height:1.3;">' 
+                        f'<span style="color:#6366f1;font-size:0.85rem;font-weight:700;margin-right:8px;">#{index}</span>' 
+                        f'{item.get("title","Untitled")}</div>' 
+                        f'<div style="font-size:0.83rem;color:#64748b;margin-bottom:6px;">{meta_str}</div>' 
+                        f'<div style="margin-bottom:4px;">{badge_str}</div>' 
+                        f'{snippet_html}' 
+                        f'<div style="margin-top:10px;">{hf_html}</div>' 
+                        '</div>' 
+                        f'<div class="score-ring" style="border-color:{ring_color};color:{ring_color};background:rgba(0,0,0,0.3);box-shadow:0 0 18px {ring_glow};flex-shrink:0;">' 
+                        f'{score}%<br><span style="font-size:0.58rem;font-weight:600;color:#64748b;text-transform:uppercase;">{fit}</span>' 
+                        '</div></div>' 
+                        '<div class="card-divider"></div>' 
+                        '<div style="display:flex;gap:20px;flex-wrap:wrap;">' 
+                        '<div style="flex:1;min-width:180px;">' 
+                        '<div style="font-size:0.72rem;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;">✔ Matched Skills</div>' 
+                        f'<div style="line-height:2;">{matched_chips}</div></div>' 
+                        '<div style="flex:1;min-width:180px;">' 
+                        '<div style="font-size:0.72rem;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;">✘ Missing Skills</div>' 
+                        f'<div style="line-height:2;">{missing_chips}</div></div>' 
+                        '</div>' 
+                        + ('<div class="card-divider"></div><div>' + apply_btn + '</div>' if apply_btn else "") 
+                        + '</div>'
+                    )
+                    st.markdown(card_html, unsafe_allow_html=True)
 
-                        with score_col:
-                            score = item.get("score", 0)
-                            fit   = item.get("fit_label", "Unknown")
-                            if score >= 75:
-                                st.success(f"**{score}%** match")
-                            elif score >= 50:
-                                st.warning(f"**{score}%** match")
-                            else:
-                                st.error(f"**{score}%** match")
-                            st.caption(fit)
-
-                        # Hard filter badge
-                        passed = item.get("hard_filters_passed", False)
-                        if passed:
-                            st.success("✅ Meets all requirements")
-                        else:
-                            st.warning("⚠️ Doesn't fully meet hard requirements")
-
-                        # Skills breakdown
-                        skill_c1, skill_c2 = st.columns(2)
-                        with skill_c1:
-                            matched = item.get("matched_required_skills", [])
-                            st.markdown("**✔ Matched Skills**")
-                            st.write(", ".join(matched) if matched else "—")
-
-                        with skill_c2:
-                            missing = item.get("missing_required_skills", [])
-                            st.markdown("**✘ Missing Skills**")
-                            if missing:
-                                st.write(", ".join(missing))
-                            else:
-                                st.write("None — great fit!")
-
-                        # Improvement tips
-                        recs = item.get("recommendations", [])
-                        if recs:
-                            with st.expander("💡 How to improve your match"):
-                                for rec in recs:
-                                    st.write(f"• {rec}")
-
-                        # Apply button
-                        if source_url:
-                            st.link_button("🚀 Apply on Original Website", source_url)
+                    recs = item.get("recommendations", [])
+                    if recs:
+                        with st.expander("💡 How to improve your match"):
+                            for rec in recs:
+                                st.write(f"• {rec}")
 
 
 # ============================================================
@@ -1099,29 +1492,11 @@ with page[2]:
         "Preferred Workplace Types",
         value=join_list(preference_value("preferred_workplace_types", [])),
         key="preferred_workplace_types",
-        help="Example: remote, hybrid, onsite",
+        help="Example: remote, hybrid, on-site",
     )
 
-    st.text_area(
-        "Preferred Domains",
-        value=join_list(preference_value("preferred_domains", [])),
-        key="preferred_domains",
-        help="Example: machine learning, data science, analytics",
-    )
-
-    st.selectbox(
-        "Preferred Seniority",
-        ["", "intern", "entry", "junior", "mid", "senior", "manager"],
-        index=["", "intern", "entry", "junior", "mid", "senior", "manager"].index(
-            preference_value("preferred_seniority", "") or ""
-        )
-        if (preference_value("preferred_seniority", "") or "") in ["", "intern", "entry", "junior", "mid", "senior", "manager"]
-        else 0,
-        key="preferred_seniority",
-    )
-
-    st.slider(
-        "Minimum Match Score",
+    st.number_input(
+        "Minimum Match Score (%)",
         min_value=0,
         max_value=100,
         value=int(preference_value("min_score", 50) or 50),
@@ -1142,31 +1517,28 @@ with page[2]:
 
     # ── Change Password ────────────────────────────────────
     st.divider()
-    st.subheader("🔒 Change Password")
-    st.write("Update your account password. You must enter your current password to confirm.")
+    st.subheader("Change Password")
 
-    with st.form("change_password_form"):
-        current_pw = st.text_input("Current Password", type="password", key="cp_current")
-        new_pw     = st.text_input("New Password",     type="password", key="cp_new")
-        confirm_pw = st.text_input("Confirm New Password", type="password", key="cp_confirm")
-        cp_submitted = st.form_submit_button("Update Password", use_container_width=True)
+    if not st.session_state.is_logged_in:
+        st.info("Log in to change your password.")
+    else:
+        with st.form("change_password_form"):
+            current_pw  = st.text_input("Current Password", type="password", key="cp_current")
+            new_pw      = st.text_input("New Password",     type="password", key="cp_new")
+            confirm_pw  = st.text_input("Confirm New Password", type="password", key="cp_confirm")
+            submitted   = st.form_submit_button("Change Password", use_container_width=True)
 
-    if cp_submitted:
-        if not current_pw:
-            st.warning("Please enter your current password.")
-        elif len(new_pw) < 8:
-            st.warning("New password must be at least 8 characters.")
-        elif new_pw != confirm_pw:
-            st.warning("New passwords do not match.")
-        else:
-            try:
-                result = api_post(
-                    "/auth/change-password",
-                    {
-                        "current_password": current_pw,
-                        "new_password": new_pw,
-                    },
-                )
-                st.success("Password changed successfully.")
-            except Exception as e:
-                show_api_error(e)
+        if submitted:
+            if new_pw != confirm_pw:
+                st.error("New passwords do not match.")
+            elif not current_pw or not new_pw:
+                st.error("Please fill in all fields.")
+            else:
+                try:
+                    api_post(
+                        "/auth/change-password",
+                        {"current_password": current_pw, "new_password": new_pw},
+                    )
+                    st.success("Password changed successfully.")
+                except Exception as e:
+                    show_api_error(e)

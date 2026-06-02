@@ -19,6 +19,7 @@ For Gmail you must create an App Password:
   (your normal Gmail password will NOT work here)
 """
 
+import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -29,14 +30,34 @@ import yaml
 
 
 # ─────────────────────────────────────────────
-# Config loader
+# Config loader — env vars take priority
 # ─────────────────────────────────────────────
 
 def _load_email_config() -> Dict[str, Any]:
+    """
+    Load email config with this priority:
+      1. Environment variables (set on Render dashboard)
+      2. configs/sources.yaml (local dev fallback)
+    """
+    # Env vars set on Render override everything
+    env_cfg = {
+        "smtp_host":       os.environ.get("SMTP_HOST", ""),
+        "smtp_port":       os.environ.get("SMTP_PORT", ""),
+        "sender_email":    os.environ.get("SMTP_SENDER_EMAIL", ""),
+        "sender_password": os.environ.get("SMTP_SENDER_PASSWORD", ""),
+        "app_base_url":    os.environ.get("APP_BASE_URL", ""),
+    }
+    if env_cfg["sender_email"] and env_cfg["sender_password"]:
+        return {k: v for k, v in env_cfg.items() if v}
+
+    # Fall back to sources.yaml for local dev
     config_path = Path(__file__).resolve().parents[2] / "configs" / "sources.yaml"
-    with open(config_path, "r") as f:
-        cfg = yaml.safe_load(f)
-    return cfg.get("email", {})
+    try:
+        with open(config_path, "r") as f:
+            cfg = yaml.safe_load(f)
+        return cfg.get("email", {})
+    except FileNotFoundError:
+        return {}
 
 
 # ─────────────────────────────────────────────
@@ -89,7 +110,7 @@ def send_password_reset_email(*, to_email: str, token: str) -> None:
       • The raw token for manual copy-paste as fallback
     """
     cfg = _load_email_config()
-    base_url = cfg.get("app_base_url", "http://localhost:8501").rstrip("/")
+    base_url = (os.environ.get("APP_BASE_URL") or cfg.get("app_base_url", "http://localhost:8501")).rstrip("/")
     reset_url = f"{base_url}/?reset_token={token}"
 
     subject = "Job Match — Password Reset Request"

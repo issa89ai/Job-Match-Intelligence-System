@@ -258,36 +258,89 @@ _PROFESSIONAL_DOMAINS = {
     "healthcare":  ["nurse", "doctor", "physician", "therapist", "pharmacist",
                     "dentist", "surgeon", "medical", "clinical", "caregiver",
                     "paramedic", "radiologist", "psychologist"],
-    "finance":     ["accountant", "auditor", "banker", "trader", "financial analyst",
-                    "actuary", "economist", "bookkeeper", "controller", "treasurer"],
+    "finance":     ["banker", "trader", "financial analyst", "actuary", "economist",
+                    "treasurer", "wealth manager", "investment analyst", "portfolio manager",
+                    "credit analyst", "risk analyst", "financial planner"],
     "marketing":   ["marketing", "marketer", "seo", "content writer", "copywriter",
                     "brand", "advertising", "social media", "growth hacker",
                     "email marketing", "campaign", "digital marketing"],
     "sales":       ["sales", "account executive", "account manager",
-                    "business development", "customer success", "sales engineer"],
+                    "business development", "customer success", "sales engineer",
+                    "sales representative", "territory manager", "channel manager",
+                    "inside sales", "outside sales", "sales director"],
     "hr":          ["recruiter", "hr manager", "human resources", "talent acquisition",
-                    "people operations", "hrbp"],
+                    "people operations", "hrbp", "hr generalist", "hr coordinator",
+                    "hr business partner", "compensation", "benefits", "payroll",
+                    "organizational development", "learning and development"],
     "legal":       ["lawyer", "attorney", "paralegal", "legal counsel",
-                    "compliance", "solicitor", "barrister"],
+                    "compliance", "solicitor", "barrister", "notary",
+                    "legal analyst", "legal assistant", "contracts manager",
+                    "corporate counsel", "in-house counsel", "compliance officer"],
     "operations":  ["operations manager", "supply chain", "logistics", "warehouse",
-                    "procurement", "project manager", "program manager"],
+                    "procurement", "project manager", "program manager",
+                    "process improvement", "operations analyst", "delivery manager",
+                    "scrum master", "agile coach", "pmo"],
     "design":      ["designer", "ux designer", "ui designer", "graphic designer",
-                    "product designer", "creative director", "art director"],
+                    "product designer", "creative director", "art director",
+                    "motion designer", "visual designer", "interaction designer",
+                    "brand designer", "communication designer"],
     "research":    ["researcher", "biologist", "chemist", "physicist",
-                    "lab scientist", "r&d", "clinical researcher"],
+                    "lab scientist", "r&d", "clinical researcher", "epidemiologist",
+                    "research analyst", "research associate", "scientist",
+                    "lab technician", "research coordinator"],
     "management":  ["manager", "director", "executive", "ceo", "cto", "cfo",
                     "vp ", "vice president", "head of", "chief"],
+    # ── Additional non-tech professions ───────────────────────────────────
+    "accounting":  ["accountant", "bookkeeper", "controller", "cpa", "ca",
+                    "auditor", "tax", "cost accountant", "management accountant",
+                    "fund accountant", "accounts payable", "accounts receivable"],
+    "nursing":     ["nurse", "registered nurse", "rn", "lpn", "nurse practitioner",
+                    "clinical nurse", "nursing"],
+    "medicine":    ["doctor", "physician", "surgeon", "gp", "general practitioner",
+                    "specialist", "resident", "fellow", "medical officer"],
+    "allied_health":["therapist", "physiotherapist", "occupational therapist",
+                    "pharmacist", "dentist", "radiologist", "dietitian",
+                    "nutritionist", "optometrist", "speech therapist"],
+    "mental_health":["psychologist", "psychiatrist", "counsellor", "counselor",
+                    "social worker", "mental health", "behavioural therapist"],
+    "teaching":    ["teacher", "educator", "instructor", "lecturer", "professor",
+                    "tutor", "teaching assistant", "early childhood", "ece",
+                    "childcare", "daycare", "preschool"],
+    "construction": ["civil engineer", "structural engineer", "site engineer",
+                    "construction manager", "site manager", "quantity surveyor",
+                    "architect", "mechanical engineer", "electrical engineer",
+                    "project engineer", "estimator"],
+    "hospitality": ["chef", "cook", "bartender", "hotel", "restaurant manager",
+                    "front desk", "concierge", "food and beverage", "catering",
+                    "hospitality manager", "event coordinator"],
+    "retail":      ["retail", "store manager", "merchandiser", "buyer",
+                    "visual merchandiser", "retail associate"],
+    "real_estate": ["realtor", "real estate", "property manager", "leasing agent",
+                    "mortgage broker", "appraiser"],
 }
 
 # Domains that are compatible when combined (e.g. a tech manager is fine for a tech role)
 _COMPATIBLE_PAIRS = {
+    # Management combos — a manager in any field is valid for that field
     frozenset(["tech", "management"]),
     frozenset(["data", "management"]),
-    frozenset(["tech", "data"]),
     frozenset(["sales", "management"]),
     frozenset(["operations", "management"]),
     frozenset(["finance", "management"]),
     frozenset(["marketing", "management"]),
+    frozenset(["accounting", "management"]),
+    frozenset(["hr", "management"]),
+    frozenset(["legal", "management"]),
+    # Closely related professional domains
+    frozenset(["tech", "data"]),
+    frozenset(["finance", "accounting"]),   # accountant ↔ financial analyst
+    frozenset(["finance", "operations"]),   # finance ops / treasury ops
+    frozenset(["nursing", "healthcare"]),   # nurse vs healthcare admin
+    frozenset(["medicine", "healthcare"]),  # doctor vs clinical coordinator
+    frozenset(["hr", "operations"]),        # people ops / HR ops
+    frozenset(["legal", "compliance"]),     # compliance officer ↔ lawyer
+    frozenset(["sales", "marketing"]),      # sales & marketing overlap
+    frozenset(["research", "data"]),        # research scientist ↔ data scientist
 }
 
 

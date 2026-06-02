@@ -81,11 +81,16 @@ saved profiles, saved preferences, and multi-job recommendations.
     ],
 )
 
-# Allow browser requests from any origin so jobmatch.html can call the API.
-# Tighten allow_origins to your deployed domain before going to production.
+# CORS — allow Streamlit Cloud and local dev.
+# Set ALLOWED_ORIGINS env var on Render to your Streamlit Cloud URL
+# e.g. "https://yourapp.streamlit.app" (comma-separated for multiple).
+import os as _os
+_raw_origins = _os.environ.get("ALLOWED_ORIGINS", "*")
+_origins = [o.strip() for o in _raw_origins.split(",")] if _raw_origins != "*" else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

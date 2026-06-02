@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 
 # =========================================================
 # SQLAlchemy Imports
@@ -30,7 +31,11 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # job_match_app.db
 #
 # in current project directory.
-DATABASE_URL = "sqlite:///./job_match_app.db"
+# On Render the working directory is the repo root, so the DB file lands in
+# /opt/render/project/src/job_match_app.db (persistent disk on paid plan).
+# On the free plan the filesystem is ephemeral — data resets on redeploy.
+# Override by setting DATABASE_URL env var in the Render dashboard.
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./job_match_app.db")
 
 
 # =========================================================

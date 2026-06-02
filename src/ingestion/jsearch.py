@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from src.utils.logger import get_logger
+from src.ingestion.job_templates import find_template
 
 logger = get_logger(__name__)
 
@@ -183,6 +184,86 @@ class JSearchClient:
         # Communication / Soft skills sometimes listed as requirements
         "communication", "problem solving", "critical thinking",
         "collaboration", "stakeholder management", "presentation",
+
+        # ── Finance / Accounting ──────────────────────────────────────────
+        "gaap", "ifrs", "sox", "sarbanes-oxley",
+        "cpa", "cfa", "cma", "acca", "ca",
+        "financial reporting", "financial modeling", "financial analysis",
+        "financial statements", "financial planning",
+        "budgeting", "budget management", "variance analysis",
+        "forecasting", "cash flow", "cash flow management",
+        "accounts payable", "accounts receivable", "general ledger",
+        "month-end close", "year-end close", "reconciliation",
+        "bank reconciliation", "journal entries", "accruals",
+        "audit", "internal audit", "external audit", "audit preparation",
+        "tax", "tax compliance", "tax filing", "corporate tax", "tax planning",
+        "payroll", "payroll processing",
+        "quickbooks", "sap", "oracle financials", "sage", "netsuite",
+        "xero", "workday financials", "dynamics 365",
+        "erp", "enterprise resource planning",
+        "consolidations", "intercompany", "transfer pricing",
+        "risk management", "financial risk", "credit risk",
+        "valuation", "dcf", "discounted cash flow",
+        "investment analysis", "portfolio management",
+        "cost accounting", "management accounting", "fund accounting",
+        "bookkeeping", "double entry", "chart of accounts",
+        "accounts management", "billing", "invoicing",
+        "bloomberg", "refinitiv",
+
+        # ── Human Resources ───────────────────────────────────────────────
+        "recruitment", "talent acquisition", "talent management",
+        "onboarding", "offboarding", "hris",
+        "workday", "bamboohr", "adp", "successfactors",
+        "performance management", "performance review",
+        "employee relations", "labour relations", "employment law",
+        "compensation", "benefits administration", "total rewards",
+        "succession planning", "learning and development",
+        "diversity equity inclusion", "dei",
+        "organizational development", "change management",
+
+        # ── Marketing / Sales ─────────────────────────────────────────────
+        "seo", "sem", "ppc", "google ads", "facebook ads",
+        "social media marketing", "content marketing", "email marketing",
+        "marketing automation", "hubspot", "marketo", "salesforce",
+        "crm", "lead generation", "demand generation",
+        "brand management", "digital marketing", "growth marketing",
+        "affiliate marketing", "influencer marketing",
+        "copywriting", "content creation", "content strategy",
+        "market research", "competitive analysis",
+        "b2b", "b2c", "account management", "customer success",
+
+        # ── Legal / Compliance ────────────────────────────────────────────
+        "contract management", "contract review", "contract drafting",
+        "legal research", "litigation", "due diligence",
+        "compliance", "regulatory compliance", "gdpr", "hipaa",
+        "intellectual property", "patent", "trademark",
+        "corporate law", "employment law", "mergers and acquisitions",
+        "legal writing", "case management",
+
+        # ── Healthcare / Clinical ─────────────────────────────────────────
+        "patient care", "clinical assessment", "clinical research",
+        "ehr", "emr", "epic", "meditech", "cerner",
+        "hipaa", "icd-10", "cpt coding", "medical coding",
+        "nursing", "pharmacology", "medication administration",
+        "diagnosis", "treatment planning", "patient education",
+        "clinical trials", "good clinical practice", "gcp",
+        "phlebotomy", "vital signs", "medical terminology",
+
+        # ── Operations / Supply Chain ─────────────────────────────────────
+        "supply chain management", "logistics", "procurement",
+        "inventory management", "warehouse management",
+        "lean manufacturing", "six sigma", "kaizen",
+        "process improvement", "operations management",
+        "vendor management", "contract negotiation",
+        "demand planning", "capacity planning",
+        "sap mm", "sap sd", "sap wm",
+
+        # ── Education / Training ──────────────────────────────────────────
+        "curriculum development", "lesson planning", "instructional design",
+        "e-learning", "lms", "learning management system",
+        "classroom management", "student assessment", "differentiated instruction",
+        "special education", "iep", "early childhood education",
+        "adult learning", "training delivery", "facilitation",
     ]
 
     # ── Contextual patterns — extract skills from prose ──────────────────
@@ -216,6 +297,68 @@ class JSearchClient:
         "team", "teams", "company", "role", "position", "candidates",
         "work", "working", "us", "you", "we", "be", "is", "are", "will",
         "have", "has", "been", "should", "must", "can", "may",
+    }
+
+    # Skills that require word-boundary matching because they are short or look
+    # like common English words / substrings.  Without boundaries:
+    #   "go"    → false-match inside "ongoing", "going", "undergo"
+    #   "r"     → false-match everywhere
+    #   "c"     → false-match everywhere
+    #   "rag"   → false-match inside "fragile", "managing"  (no – but "rag" IS
+    #              a substring of e.g. "rage", "brag", "rag-" tokens)
+    #   "rds"   → false-match inside "records", "rewards", "procedures"
+    #   "scala" → fine length-wise but "scale" ≠ "scala"; still safe to boundary
+    _WORD_BOUNDARY_SKILLS = {
+        # Very short programming language names
+        "go", "r", "c", "c#", "c++",
+        # Abbreviations & 3-char tokens that appear as substrings
+        "rag", "rds", "ec2", "s3", "k8s", "vba",
+        # Common short words used as skill names
+        "sql", "git", "seo", "sem", "ppc", "erp", "crm", "ehr", "emr",
+        "lms", "iep", "dei", "gcp", "aws", "rds",
+    }
+
+    # Pure-tech skills that must NOT appear on non-tech jobs (accounting,
+    # HR, marketing, legal, healthcare, education, etc.).  We suppress these
+    # when the inferred job domain is clearly non-tech.
+    _TECH_ONLY_SKILLS = {
+        # Languages
+        "go", "golang", "rust", "scala", "kotlin", "swift", "perl",
+        "haskell", "julia", "groovy", "dart", "assembly",
+        # ML/AI
+        "rag", "retrieval augmented generation", "langchain", "llm",
+        "large language model", "generative ai", "transformers", "bert",
+        "gpt", "llama", "hugging face", "spacy", "nltk", "opencv",
+        "fastai", "mlops", "model deployment", "feature engineering",
+        # Cloud infra
+        "rds", "ec2", "s3", "sagemaker", "lambda", "athena",
+        "kubernetes", "k8s", "helm", "terraform", "ansible",
+        "prometheus", "grafana", "datadog",
+        # Data engineering / streaming
+        "apache kafka", "kafka", "apache flink", "flink",
+        "hadoop", "hive", "presto", "trino", "luigi", "dbt",
+        "apache airflow", "airflow", "apache spark",
+        # DevOps
+        "jenkins", "github actions", "gitlab ci", "circleci",
+        "docker", "ci/cd",
+    }
+
+    # Job title keywords that signal the posting is NOT a tech role.
+    # When matched, _TECH_ONLY_SKILLS will be excluded from results.
+    _NON_TECH_TITLE_SIGNALS = {
+        "accountant", "bookkeeper", "controller", "accounts payable",
+        "accounts receivable", "payroll", "auditor", "tax",
+        "nurse", "nursing", "physician", "doctor", "therapist",
+        "pharmacist", "dentist", "radiologist", "clinician",
+        "teacher", "educator", "instructor", "lecturer", "professor",
+        "recruiter", "hr manager", "human resources", "talent acquisition",
+        "marketing", "copywriter", "content writer", "seo specialist",
+        "social media",
+        "lawyer", "attorney", "paralegal", "solicitor",
+        "operations manager", "supply chain", "logistics", "procurement",
+        "hotel", "restaurant", "chef", "retail", "real estate",
+        "financial analyst", "finance manager", "banker", "trader",
+        "investment analyst", "credit analyst",
     }
 
     @classmethod
@@ -282,10 +425,23 @@ class JSearchClient:
         combined      = " ".join(text_parts)
         combined_lower = combined.lower()
 
+        # Detect whether this is a non-tech job based on the job title field.
+        job_title_lower = cls._safe_str(job.get("job_title", "")).lower()
+        is_non_tech = any(sig in job_title_lower for sig in cls._NON_TECH_TITLE_SIGNALS)
+
         # ── Pass 1: vocabulary scan (multi-word first to avoid sub-matches) ─
         for skill in sorted(cls.KNOWN_SKILLS_VOCAB, key=len, reverse=True):
-            if skill in combined_lower:
-                found.add(skill)
+            # Skip pure-tech skills for clearly non-tech jobs
+            if is_non_tech and skill in cls._TECH_ONLY_SKILLS:
+                continue
+            # Short/ambiguous terms: require word boundaries to avoid false
+            # positives from substring matches (e.g. "rds" inside "records")
+            if skill in cls._WORD_BOUNDARY_SKILLS:
+                if re.search(r"\b" + re.escape(skill) + r"\b", combined_lower):
+                    found.add(skill)
+            else:
+                if skill in combined_lower:
+                    found.add(skill)
 
         # ── Pass 2: contextual requirement patterns ──────────────────────
         for pattern in cls._REQUIREMENT_PATTERNS:
@@ -358,32 +514,123 @@ class JSearchClient:
 
     # Broad domain vocabulary for job title classification
     _DOMAIN_KEYWORDS = {
-        "machine learning":     ["machine learning", "ml engineer", "ai engineer", "deep learning", "nlp engineer"],
+        # ── Tech ──────────────────────────────────────────────────────────
+        "machine learning":     ["machine learning", "ml engineer", "ai engineer",
+                                 "deep learning", "nlp engineer", "computer vision"],
         "data science":         ["data scientist", "data science"],
-        "data engineering":     ["data engineer", "data pipeline", "etl"],
-        "analytics":            ["data analyst", "business analyst", "analytics engineer", "bi developer",
-                                 "business intelligence"],
+        "data engineering":     ["data engineer", "data pipeline", "etl", "elt"],
+        "analytics":            ["data analyst", "business analyst", "analytics engineer",
+                                 "bi developer", "business intelligence"],
         "software engineering": ["software engineer", "software developer", "backend engineer",
                                  "frontend engineer", "full stack", "fullstack", "web developer",
-                                 "mobile developer", "ios developer", "android developer"],
+                                 "mobile developer", "ios developer", "android developer",
+                                 "embedded engineer", "firmware engineer"],
         "devops":               ["devops", "sre", "site reliability", "platform engineer",
-                                 "cloud engineer", "infrastructure engineer"],
-        "cybersecurity":        ["security engineer", "cybersecurity", "information security", "soc analyst"],
-        "education":            ["teacher", "educator", "instructor", "professor", "tutor",
-                                 "curriculum", "childcare", "daycare", "preschool", "school"],
-        "healthcare":           ["nurse", "doctor", "physician", "therapist", "pharmacist",
-                                 "dentist", "surgeon", "medical", "clinical", "caregiver"],
-        "finance":              ["accountant", "auditor", "financial analyst", "banker",
-                                 "trader", "actuary", "bookkeeper"],
-        "marketing":            ["marketing", "seo specialist", "content writer", "copywriter",
-                                 "growth", "brand manager"],
-        "sales":                ["sales", "account executive", "business development",
-                                 "customer success"],
-        "hr":                   ["recruiter", "hr manager", "human resources",
-                                 "talent acquisition", "people operations"],
-        "product management":   ["product manager", "product owner", "program manager"],
+                                 "cloud engineer", "infrastructure engineer", "mlops"],
+        "cybersecurity":        ["security engineer", "cybersecurity", "information security",
+                                 "soc analyst", "penetration tester", "security analyst"],
+        "product management":   ["product manager", "product owner", "program manager",
+                                 "technical product"],
         "design":               ["ux designer", "ui designer", "graphic designer",
-                                 "product designer", "visual designer"],
+                                 "product designer", "visual designer", "interaction designer",
+                                 "motion designer", "art director", "creative director"],
+
+        # ── Finance & Accounting ───────────────────────────────────────────
+        "accounting":           ["accountant", "bookkeeper", "controller", "comptroller",
+                                 "accounts payable", "accounts receivable", "cpa", "ca",
+                                 "management accountant", "cost accountant", "fund accountant"],
+        "finance":              ["financial analyst", "finance manager", "banker", "trader",
+                                 "actuary", "investment analyst", "portfolio manager",
+                                 "treasury", "cfo", "budget analyst", "financial planner",
+                                 "wealth manager", "credit analyst", "risk analyst"],
+        "audit":                ["auditor", "internal auditor", "external auditor",
+                                 "audit manager", "compliance auditor", "it auditor"],
+
+        # ── Healthcare & Clinical ──────────────────────────────────────────
+        "nursing":              ["nurse", "registered nurse", "rn", "lpn", "np",
+                                 "nurse practitioner", "clinical nurse"],
+        "medicine":             ["doctor", "physician", "surgeon", "specialist",
+                                 "gp", "general practitioner", "resident", "fellow"],
+        "allied health":        ["therapist", "physiotherapist", "occupational therapist",
+                                 "speech therapist", "pharmacist", "dentist", "dental",
+                                 "radiologist", "lab technician", "medical lab",
+                                 "dietitian", "nutritionist", "optometrist"],
+        "mental health":        ["psychologist", "psychiatrist", "counsellor", "counselor",
+                                 "social worker", "mental health", "behavioural therapist"],
+        "healthcare admin":     ["healthcare administrator", "medical office", "clinical coordinator",
+                                 "health information", "patient coordinator", "medical secretary"],
+
+        # ── Education ─────────────────────────────────────────────────────
+        "teaching":             ["teacher", "educator", "instructor", "lecturer",
+                                 "professor", "tutor", "teaching assistant"],
+        "education admin":      ["principal", "vice principal", "school administrator",
+                                 "curriculum coordinator", "education director"],
+        "early childhood":      ["early childhood", "ece", "daycare", "childcare",
+                                 "preschool", "kindergarten"],
+        "corporate training":   ["trainer", "training specialist", "facilitator",
+                                 "learning and development", "instructional designer",
+                                 "e-learning developer"],
+
+        # ── Human Resources ────────────────────────────────────────────────
+        "hr":                   ["recruiter", "hr manager", "human resources",
+                                 "talent acquisition", "people operations", "hrbp",
+                                 "hr business partner", "hr generalist", "hr coordinator",
+                                 "compensation", "benefits specialist", "payroll specialist"],
+
+        # ── Marketing & Communications ─────────────────────────────────────
+        "marketing":            ["marketing", "digital marketing", "content marketing",
+                                 "seo specialist", "sem specialist", "content writer",
+                                 "copywriter", "brand manager", "marketing manager",
+                                 "communications", "public relations", "pr specialist",
+                                 "social media manager", "email marketing"],
+        "advertising":          ["media buyer", "media planner", "account director",
+                                 "advertising", "campaign manager", "creative strategist"],
+
+        # ── Sales ──────────────────────────────────────────────────────────
+        "sales":                ["sales", "account executive", "account manager",
+                                 "business development", "customer success", "sales manager",
+                                 "sales representative", "inside sales", "outside sales",
+                                 "territory manager", "channel sales"],
+
+        # ── Legal ──────────────────────────────────────────────────────────
+        "legal":                ["lawyer", "attorney", "solicitor", "barrister",
+                                 "paralegal", "legal counsel", "corporate counsel",
+                                 "compliance officer", "legal analyst", "notary",
+                                 "legal assistant", "contracts manager"],
+
+        # ── Operations & Supply Chain ──────────────────────────────────────
+        "operations":           ["operations manager", "operations analyst", "operations coordinator",
+                                 "business operations", "process improvement"],
+        "supply chain":         ["supply chain", "logistics", "procurement", "purchasing",
+                                 "inventory", "warehouse", "distribution", "import export",
+                                 "freight", "customs", "demand planning"],
+        "project management":   ["project manager", "project coordinator", "pmo",
+                                 "delivery manager", "scrum master", "agile coach"],
+
+        # ── Construction & Engineering ─────────────────────────────────────
+        "civil engineering":    ["civil engineer", "structural engineer", "geotechnical",
+                                 "site engineer", "construction manager", "site manager"],
+        "mechanical engineering":["mechanical engineer", "manufacturing engineer",
+                                 "process engineer", "maintenance engineer"],
+        "electrical engineering":["electrical engineer", "electronics engineer",
+                                 "control systems", "instrumentation"],
+
+        # ── Hospitality & Retail ───────────────────────────────────────────
+        "hospitality":          ["hotel", "restaurant", "chef", "cook", "bartender",
+                                 "front desk", "concierge", "food and beverage",
+                                 "catering", "hospitality manager"],
+        "retail":               ["retail", "store manager", "merchandiser", "buyer",
+                                 "visual merchandiser", "retail associate", "cashier"],
+
+        # ── Real Estate ────────────────────────────────────────────────────
+        "real estate":          ["real estate", "realtor", "property manager",
+                                 "leasing agent", "mortgage", "appraisal",
+                                 "real estate analyst"],
+
+        # ── Research & Science ─────────────────────────────────────────────
+        "research":             ["researcher", "research scientist", "research analyst",
+                                 "biologist", "chemist", "physicist", "lab scientist",
+                                 "r&d", "clinical researcher", "epidemiologist"],
     }
 
     @classmethod
@@ -413,6 +660,13 @@ class JSearchClient:
         """
         Convert raw JSearch API results into the unified job schema
         that the matching engine already understands.
+
+        For each job:
+          1. Extract skills via NLP (vocab scan + regex patterns)
+          2. Look up the job title in JOB_TEMPLATES and merge the canonical
+             skill baseline — guarantees correct skills even when the posting
+             is sparse, badly written, or uses unusual phrasing.
+          3. Return the unified job dict ready for the matching engine.
         """
         normalized: List[Dict[str, Any]] = []
 
@@ -432,11 +686,29 @@ class JSearchClient:
 
             description = " ".join(p for p in description_parts if p)
 
-            # Skills: scan structured fields + full description text.
+            # ── Step 1: NLP extraction ───────────────────────────────────────
             required_skills = self._extract_skills_from_text(job, description)
             preferred_skills: List[str] = []
 
-            # Employment / workplace type.
+            # ── Step 2: Template merge ───────────────────────────────────────
+            # Look up the canonical skill baseline for this job title.
+            # The template guarantees the right skills for every profession
+            # even when the posting is sparse or badly written.
+            # NLP-extracted skills are kept on top (union, deduped, sorted).
+            job_title_str = self._safe_str(job.get("job_title"))
+            template = find_template(job_title_str)
+            if template:
+                merged_req = set(required_skills) | {
+                    s.lower() for s in template.get("required_skills", [])
+                }
+                required_skills = sorted(merged_req)
+
+                merged_pref = set(preferred_skills) | {
+                    s.lower() for s in template.get("preferred_skills", [])
+                }
+                preferred_skills = sorted(merged_pref)
+
+            # ── Employment / workplace type ──────────────────────────────────
             emp_type = self._safe_str(job.get("job_employment_type")).lower()
             is_remote = bool(job.get("job_is_remote"))
             if is_remote:
@@ -446,7 +718,7 @@ class JSearchClient:
             else:
                 workplace_type = "onsite" if emp_type else ""
 
-            # Location string.
+            # ── Location ─────────────────────────────────────────────────────
             city    = self._safe_str(job.get("job_city"))
             state   = self._safe_str(job.get("job_state"))
             country = self._safe_str(job.get("job_country"))
@@ -456,13 +728,13 @@ class JSearchClient:
             normalized.append(
                 {
                     # Identifiers
-                    "job_id":        job_id,
-                    "title":         self._safe_str(job.get("job_title")),
-                    "company":       self._safe_str(job.get("employer_name")),
-                    "location":      location,
+                    "job_id":         job_id,
+                    "title":          self._safe_str(job.get("job_title")),
+                    "company":        self._safe_str(job.get("employer_name")),
+                    "location":       location,
                     "workplace_type": workplace_type,
 
-                    # Skills
+                    # Skills (template-backed + NLP-extracted)
                     "required_skills":  required_skills,
                     "preferred_skills": preferred_skills,
                     "other_skills":     [],
@@ -479,12 +751,13 @@ class JSearchClient:
                     ),
 
                     # Extra metadata for display in UI
-                    "source_url":         self._safe_str(job.get("job_apply_link")
-                                                          or job.get("job_google_link")),
-                    "employer_logo":      self._safe_str(job.get("employer_logo")),
+                    "source_url":          self._safe_str(
+                        job.get("job_apply_link") or job.get("job_google_link")
+                    ),
+                    "employer_logo":       self._safe_str(job.get("employer_logo")),
                     "description_snippet": description[:500],
-                    "date_posted":        self._safe_str(job.get("job_posted_at_datetime_utc")),
-                    "search_query":       search_query,
+                    "date_posted":         self._safe_str(job.get("job_posted_at_datetime_utc")),
+                    "search_query":        search_query,
                 }
             )
 
