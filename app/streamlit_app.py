@@ -42,6 +42,37 @@ def join_list(values: Optional[List[str]]) -> str:
     return ", ".join(values)
 
 
+
+# ============================================================
+# Google Analytics 4 + UTM tracking
+# ============================================================
+def inject_analytics() -> None:
+    GA_ID = "G-NL5BPY86QT"
+    # Read UTM params from URL if present
+    try:
+        params = st.query_params
+        utm_source   = params.get("utm_source", "")
+        utm_campaign = params.get("utm_campaign", "")
+        utm_medium   = params.get("utm_medium", "")
+    except Exception:
+        utm_source = utm_campaign = utm_medium = ""
+
+    ga_script = f"""
+<!-- Google Analytics 4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={GA_ID}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){{dataLayer.push(arguments);}}
+  gtag('js', new Date());
+  gtag('config', '{GA_ID}', {{
+    'utm_source':   '{utm_source}',
+    'utm_medium':   '{utm_medium}',
+    'utm_campaign': '{utm_campaign}'
+  }});
+</script>
+"""
+    st.markdown(ga_script, unsafe_allow_html=True)
+
 def init_state() -> None:
     defaults = {
         "api_url": _default_api_url(),
@@ -692,6 +723,7 @@ def display_recommendations(result: Dict[str, Any]) -> None:
 # ============================================================
 init_state()
 inject_css()
+inject_analytics()
 
 st.title("💼 Job Match Intelligence System")
 st.caption("Candidate profile, job matching, and dataset-based recommendations.")
