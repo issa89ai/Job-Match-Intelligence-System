@@ -116,6 +116,12 @@ def inject_css() -> None:
 .stApp { background-color: #0a0e1a !important; color: #dde3f0; }
 section[data-testid="stMain"] > div { background-color: #0a0e1a !important; }
 
+/* ── Hide sidebar collapse button icon text ── */
+[data-testid="collapsedControl"] { display: none !important; }
+button[kind="header"] { display: none !important; }
+.st-emotion-cache-1dp5vir { display: none !important; }
+span.css-fblp2m { display: none !important; }
+
 /* ── Sidebar ── */
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #0f1322 0%, #111827 100%) !important;
