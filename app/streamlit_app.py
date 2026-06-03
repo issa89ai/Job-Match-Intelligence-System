@@ -735,11 +735,6 @@ st.caption("Candidate profile, job matching, and dataset-based recommendations."
 with st.sidebar:
     st.header("Settings")
 
-    st.session_state.api_url = st.text_input(
-        "FastAPI URL",
-        value=st.session_state.api_url,
-    )
-
     st.divider()
 
     if not st.session_state.is_logged_in:
