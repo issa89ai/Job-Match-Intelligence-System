@@ -468,6 +468,87 @@ hr { border: none !important; border-top: 1px solid rgba(99,102,241,0.2) !import
 
 /* ── Checkbox ── */
 .stCheckbox > label { color: #94a3b8 !important; }
+
+/* ══════════════════════════════════════
+   MOBILE RESPONSIVE
+   ══════════════════════════════════════ */
+@media (max-width: 768px) {
+    /* Main content padding */
+    .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        padding-top: 1rem !important;
+        max-width: 100% !important;
+    }
+
+    /* Smaller title */
+    h1 { font-size: 1.4rem !important; }
+    h2 { font-size: 1.1rem !important; }
+    h3 { font-size: 1rem !important; }
+
+    /* Tabs — smaller text, wrap */
+    .stTabs [data-baseweb="tab-list"] {
+        flex-wrap: wrap !important;
+        gap: 4px !important;
+        padding: 4px !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-size: 0.75rem !important;
+        padding: 6px 12px !important;
+    }
+
+    /* Job cards — tighter padding */
+    .jm-card {
+        padding: 16px 14px !important;
+        border-radius: 14px !important;
+    }
+
+    /* Score ring — smaller */
+    .score-ring {
+        width: 64px !important;
+        height: 64px !important;
+        font-size: 16px !important;
+    }
+
+    /* Skill chips — smaller */
+    .chip-green, .chip-red {
+        font-size: 0.65rem !important;
+        padding: 2px 8px !important;
+    }
+
+    /* Apply button — full width */
+    .apply-btn {
+        display: block !important;
+        text-align: center !important;
+        width: 100% !important;
+        padding: 12px !important;
+        margin-top: 10px !important;
+    }
+
+    /* Buttons — full width */
+    .stButton > button {
+        width: 100% !important;
+    }
+
+    /* Sidebar — auto open on mobile */
+    [data-testid="stSidebar"] {
+        min-width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Metrics — single column */
+    [data-testid="metric-container"] {
+        padding: 12px 14px !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 18px !important;
+    }
+
+    /* Hide hover effects on touch */
+    .jm-card:hover { transform: none !important; }
+    .stButton > button:hover { transform: none !important; }
+    .apply-btn:hover { transform: none !important; }
+}
 </style>
 """, unsafe_allow_html=True)
 
