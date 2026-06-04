@@ -121,6 +121,26 @@ section[data-testid="stMain"] > div { background-color: #0a0e1a !important; }
 button[kind="header"] { display: none !important; }
 .st-emotion-cache-1dp5vir { display: none !important; }
 span.css-fblp2m { display: none !important; }
+/* Hide ALL sidebar toggle buttons and their icon text */
+button[data-testid="baseButton-header"] { display: none !important; }
+[data-testid="stSidebarCollapsedControl"] { display: none !important; }
+section[data-testid="stSidebarCollapsedControl"] { display: none !important; }
+div[data-testid="collapsedControl"] { display: none !important; }
+/* Hide the material icon text that leaks out */
+.st-emotion-cache-dvne4q { display: none !important; }
+[aria-label="Close sidebar"] { display: none !important; }
+[aria-label="Open sidebar"] { display: none !important; }
+
+/* ── Hide "Press Enter to submit form" tooltip ── */
+.stTextInput div[data-baseweb="input"] + div { display: none !important; }
+small.st-emotion-cache-16idsys { display: none !important; }
+.stTextInput [class*="instructions"] { display: none !important; }
+.stTextArea [class*="instructions"] { display: none !important; }
+/* Universal: hide any helper text that says "Press Enter" */
+div[class*="InputInstructions"] { display: none !important; }
+p[class*="instructions"] { display: none !important; }
+[data-testid="InputInstructions"] { display: none !important; }
+small[id*="instructions"] { display: none !important; }
 
 /* ── Sidebar ── */
 [data-testid="stSidebar"] {
