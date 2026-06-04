@@ -1,680 +1,166 @@
-\# 💼 Job Match Intelligence System
+# 💼 Job Match Intelligence System
 
+An end-to-end intelligent job matching platform that collects real-world job postings, matches them against candidate profiles using an explainable scoring engine, and serves everything through a live web application.
 
+🔗 **Live App:** [job-match-intelligence-system-m7srotvkvxfkmwhm9e35kv.streamlit.app](https://job-match-intelligence-system-m7srotvkvxfkmwhm9e35kv.streamlit.app)
 
-An end-to-end intelligent platform that collects real-world job postings, processes them into structured datasets, and matches them with candidate profiles using an explainable scoring and recommendation engine.
+---
 
+## 🚀 What It Does
 
+- Collects live job postings via the **JSearch API** (LinkedIn, Indeed, Glassdoor, and more)
+- Extracts job requirements — skills, experience, education, seniority
+- Parses candidate profiles (manual input or **resume upload** — PDF/DOCX)
+- Computes **explainable match scores** with component breakdowns
+- Generates **personalized job recommendations** ranked by fit
+- Full **authentication system** — register, login, JWT, password reset via email
+- **Multi-profile support** — manage multiple candidate profiles per account
+- **Google Analytics 4** tracking with UTM attribution
 
-\---
+---
 
-
-
-\## 📌 Overview
-
-
-
-This project implements a \*\*production-style Job Intelligence System\*\* that:
-
-
-
-\* Collects real job postings from external sources (Greenhouse, Lever)
-
-\* Processes data through structured pipeline layers
-
-\* Extracts job requirements (skills, experience, education, seniority)
-
-\* Parses and structures candidate profiles
-
-\* Computes explainable job–candidate match scores
-
-\* Generates personalized job recommendations
-
-\* Provides a full API + interactive frontend
-
-
-
-\---
-
-
-
-\## 🏗️ Architecture
-
-
-
-```text
-
-Raw → Staging → Curated → Extracted → Matching → API → UI
+## 🏗️ Architecture
 
 ```
+Raw Jobs → Staging → Curated → Extracted → Matching Engine → FastAPI → Streamlit UI
+```
 
+**Backend:** FastAPI + SQLAlchemy + SQLite — deployed on [Render](https://render.com)  
+**Frontend:** Streamlit — deployed on [Streamlit Cloud](https://streamlit.io/cloud)
 
+---
 
-\---
+## 📁 Project Structure
 
-
-
-\## 📁 Project Structure
-
-
-
-```text
-
+```
 Job-Match-Intelligence-System/
-
 │
-
-├── app/                    # Streamlit frontend
-
-│   ├── streamlit\_app.py
-
-│   └── style.css
-
+├── app/
+│   └── streamlit_app.py        # Full Streamlit frontend
 │
-
 ├── configs/
-
-│   ├── sources.yaml
-
-│   ├── skills.yaml
-
-│   └── scoring.yaml
-
+│   ├── sources.yaml            # API keys & email config
+│   ├── skills.yaml             # Skill taxonomy
+│   └── scoring.yaml            # Scoring weights
 │
-
-├── data/
-
-│   ├── raw/
-
-│   ├── staging/
-
-│   ├── curated/
-
-│   └── evaluation/
-
-│
-
 ├── src/
-
-│   ├── api/               # FastAPI backend
-
-│   ├── auth/              # Authentication (JWT)
-
-│   ├── candidate/         # Candidate parsing \& features
-
-│   ├── db/                # Database models
-
-│   ├── extraction/        # Requirement extraction
-
-│   ├── ingestion/         # Job ingestion pipelines
-
-│   ├── matching/          # Scoring, ranking, recommendation
-
-│   ├── normalization/     # Data cleaning \& structuring
-
-│   ├── utils/             # Utilities
-
-│   └── evaluation/        # Evaluation scripts
-
+│   ├── api/
+│   │   ├── main.py             # FastAPI app + all endpoints
+│   │   └── email_service.py    # SMTP password reset emails
+│   ├── auth/                   # JWT authentication
+│   ├── candidate/
+│   │   └── resume_extractor.py # PDF/DOCX resume parser
+│   ├── db/                     # SQLAlchemy models
+│   ├── extraction/             # Job requirement extraction
+│   ├── ingestion/
+│   │   └── jsearch.py          # Live JSearch API client
+│   ├── matching/
+│   │   ├── scoring.py          # Weighted match scoring engine
+│   │   ├── ranker.py           # Job ranking
+│   │   └── job_templates.py    # 150+ job title skill map
+│   └── normalization/          # Data cleaning & structuring
 │
-
-├── tests/
-
-├── notebooks/
-
-├── requirements.txt
-
-└── README.md
-
+├── requirements.txt            # Frontend deps (Streamlit Cloud)
+├── requirements-backend.txt    # Backend deps (Render)
+├── render.yaml                 # Render deployment config
+├── .python-version             # Python 3.11.9
+└── DEPLOY.md                   # Full deployment guide
 ```
 
-
-
-\---
-
-
-
-\## ⚙️ System Components
-
-
-
-\---
-
-
-
-\### ✔ Phase 1 — Foundation
-
-
-
-\* Config-driven architecture (YAML)
-
-\* Utility modules (I/O, logging, text processing)
-
-
-
-\---
-
-
-
-\### ✔ Phase 2 — Ingestion Pipeline
-
-
-
-\* Collects jobs from:
-
-
-
-&#x20; \* Greenhouse
-
-&#x20; \* Lever
-
-\* Stores raw API responses
-
-\* Converts to unified schema
-
-
-
-📊 Result:
-
-
-
-\* \~747 real job postings collected 
-
-
-
-\---
-
-
-
-\### ✔ Phase 3 — Normalization Pipeline
-
-
-
-\* Job title normalization (family, function, seniority)
-
-\* Location normalization (country, region, workplace type)
-
-\* Text cleaning
-
-\* Deduplication via hashing
-
-
-
-📂 Output:
-
-
-
-```
-
-data/curated/requirements/
-
-```
-
-
-
-\---
-
-
-
-\### ✔ Phase 4 — Requirement Extraction
-
-
-
-Extracts:
-
-
-
-\* Required skills
-
-\* Preferred skills
-
-\* Years of experience
-
-\* Education requirements
-
-\* Seniority
-
-
-
-📂 Output:
-
-
-
-```
-
-data/curated/requirements\_enriched/
-
-```
-
-
-
-\---
-
-
-
-\### ✔ Phase 5 — Candidate Understanding
-
-
-
-\* Structured candidate profile schema
-
-\* Normalization of:
-
-
-
-&#x20; \* skills
-
-&#x20; \* tools
-
-&#x20; \* domains
-
-&#x20; \* education
-
-\* Feature engineering:
-
-
-
-&#x20; \* seniority inference
-
-&#x20; \* keyword aggregation
-
-
-
-\---
-
-
-
-\### ✔ Phase 6 — Matching Engine (Core Intelligence)
-
-
-
-\#### 🔹 Hard Filters
-
-
-
-\* Required skills
-
-\* Experience
-
-\* Education
-
-
-
-\#### 🔹 Scoring System (Weighted)
-
-
-
-\* Required skills
-
-\* Preferred skills
-
-\* Experience
-
-\* Education
-
-\* Seniority
-
-\* Domain alignment
-
-
-
-\#### 🔹 Output
-
-
-
-\* Match score (0–100)
-
-\* Fit label (Strong / Good / Partial / Weak)
-
-\* Matched skills
-
-\* Missing skills
-
-\* Recommendations
-
-
-
-\---
-
-
-
-\### ✔ Phase 7 — API Layer (FastAPI)
-
-
-
-Provides a complete REST API:
-
-
-
-\#### 🔐 Authentication
-
-
-
-\* Register
-
-\* Login
-
-\* JWT-based authorization
-
-
-
-\#### 👤 User Features
-
-
-
-\* Save profile
-
-\* Load profile
-
-\* Save preferences
-
-\* Load preferences
-
-
-
-\#### 📊 Core Endpoints
-
-
-
-\* `POST /match` → single job matching
-
-\* `GET /jobs` → preview dataset jobs
-
-\* `POST /recommendations` → rank jobs from input
-
-\* `POST /recommendations/from\_dataset` → full dataset ranking
-
-
-
-📄 Swagger:
-
-
-
-```
-
-http://127.0.0.1:8000/docs
-
-```
-
-
-
-\---
-
-
-
-\### ✔ Stage 8 — Frontend (Streamlit)
-
-
-
-Interactive user interface with:
-
-
-
-\* Authentication (login/register)
-
-\* Candidate profile management
-
-\* Single job matching
-
-\* Job explorer (dataset preview)
-
-\* Dataset-based recommendations
-
-\* Preferences filtering system
-
-
-
-Displays:
-
-
-
-\* Match score
-
-\* Fit label
-
-\* Hard filter results
-
-\* Skill match (matched / missing)
-
-\* Recommendations
-
-\* Component scores
-
-
-
-\---
-
-
-
-\### ✔ Stage 9 — Evaluation
-
-
-
-\#### Extraction Performance
-
-
-
-\* Precision: 0.75
-
-\* Recall: 0.625
-
-\* F1 Score: 0.6785 
-
-
-
-\#### Matching Performance
-
-
-
-\* Accuracy: 66.7% 
-
-
-
-\---
-
-
-
-\## 🧠 Data Layers
-
-
-
-\### Raw Layer
-
-
-
-\* Original API responses
-
-\* Full traceability
-
-
-
-\### Staging Layer
-
-
-
-\* Unified structured schema
-
-
-
-\### Curated Layer
-
-
-
-\* Cleaned and normalized data
-
-
-
-\### Extracted Layer
-
-
-
-\* Structured requirements
-
-
-
-\---
-
-
-
-\## 🚀 How to Run
-
-
-
-\### 1️⃣ Install Dependencies
-
-
+---
+
+## ⚙️ System Components
+
+### ✔ Phase 1–4 — Data Pipeline
+- Config-driven YAML architecture
+- Job ingestion from Greenhouse & Lever (~747 real postings)
+- Title, location, and text normalization
+- Deduplication via hashing
+- Requirement extraction: skills, experience, education, seniority
+
+### ✔ Phase 5 — Candidate Understanding
+- Structured candidate profile schema
+- Skill, tool, domain, education normalization
+- Seniority inference & keyword aggregation
+- Resume parsing from PDF and DOCX files
+
+### ✔ Phase 6 — Matching Engine
+**Hard Filters:** required skills · experience · education
+
+**Weighted Scoring:**
+| Component | Weight |
+|-----------|--------|
+| Required Skills | High |
+| Preferred Skills | Medium |
+| Experience | Medium |
+| Education | Low |
+| Seniority | Medium |
+| Domain Alignment | Medium |
+
+**Output per job:**
+- Match score (0–100) + Fit label (Strong / Good / Partial / Weak)
+- Matched skills, missing skills, component breakdown
+
+### ✔ Phase 7 — API Layer (FastAPI)
+
+| Category | Endpoints |
+|----------|-----------|
+| Auth | `POST /register` · `POST /login` · `POST /password-reset` |
+| Profiles | `GET/POST /profiles` · `PUT/DELETE /profiles/{id}` |
+| Matching | `POST /match` · `POST /recommendations` |
+| Live Jobs | `POST /recommendations/live` (JSearch) |
+| Resume | `POST /resume/parse` |
+
+Swagger docs: `https://job-match-api-iibv.onrender.com/docs`
+
+### ✔ Phase 8 — Frontend (Streamlit)
+- Dark theme UI with colorful job cards
+- Login / Register / Forgot Password / Change Password
+- Candidate profile builder + resume upload
+- Profile completeness progress bar
+- Job Matches tab — dataset-based recommendations
+- Live Jobs tab — real-time JSearch results with match scoring
+- Score rings, skill chips (matched/missing), apply buttons
+
+### ✔ Phase 9 — Evaluation
+| Metric | Score |
+|--------|-------|
+| Extraction Precision | 0.75 |
+| Extraction Recall | 0.625 |
+| Extraction F1 | 0.679 |
+| Matching Accuracy | 66.7% |
+
+---
+
+## 🖥️ Local Development
 
 ```bash
+# Terminal 1 — Backend
+uvicorn src.api.main:app --reload
 
-pip install -r requirements.txt
-
+# Terminal 2 — Frontend
+streamlit run app/streamlit_app.py
 ```
 
+Open `http://localhost:8501` in your browser.
 
+See [DEPLOY.md](DEPLOY.md) for full deployment instructions.
 
-\---
+---
 
+## 💡 Key Strengths
 
+- ✔ End-to-end system — data pipeline → matching engine → API → live web app
+- ✔ Explainable AI — transparent, component-level scoring
+- ✔ Real-world job data — live JSearch integration (LinkedIn, Indeed, Glassdoor)
+- ✔ Resume parsing — upload PDF or DOCX to auto-fill profile
+- ✔ Production deployed — Render (backend) + Streamlit Cloud (frontend)
+- ✔ Analytics — GA4 + UTM tracking for visitor attribution
 
-\### 2️⃣ Run Backend (FastAPI)
+---
 
+## 👨‍💻 Author
 
-
-```bash
-
-python -m uvicorn src.api.main:app --reload
-
-```
-
-
-
-👉 Open:
-
-
-
-```
-
-http://127.0.0.1:8000/docs
-
-```
-
-
-
-\---
-
-
-
-\### 3️⃣ Run Frontend (Streamlit)
-
-
-
-```bash
-
-python -m streamlit run app/streamlit\_app.py
-
-```
-
-
-
-\---
-
-
-
-\## 🔄 System Flow
-
-
-
-```text
-
-Jobs → Processing → Structured Data
-
-Candidate → Parsing → Features
-
-→ Matching Engine → Score + Explanation
-
-→ Recommendation Engine → Top Jobs
-
-→ UI Display
-
-```
-
-
-
-\---
-
-
-
-\## 💡 Key Strengths
-
-
-
-✔ End-to-end system (data → model → API → UI)
-
-✔ Explainable AI (transparent scoring)
-
-✔ Real-world job data integration
-
-✔ Personalized recommendations
-
-✔ Modular \& scalable architecture
-
-
-
-\---
-
-
-
-\## 📈 Future Improvements
-
-
-
-\* NLP-based skill extraction (transformers)
-
-\* Embedding-based semantic matching
-
-\* Real-time job ingestion
-
-\* Improved UI (job cards, filtering, sorting)
-
-\* Profile strength scoring
-
-\* Deployment (Render / Streamlit Cloud)
-
-
-
-\---
-
-
-
-\## 💡 Key Insight
-
-
-
-Most system complexity lies in:
-
-
-
-```text
-
-Data processing, normalization, and structuring — not the model itself
-
-```
-
-
-
-\---
-
-
-
-\## 👨‍💻 Author
-
-
-
-\*\*Ahmad Issa\*\*
-
-Machine Learning Engineer | Data Science \& AI Systems
-
-\---
-
-
-
+**Ahmad Issa**  
+Machine Learning Engineer | Data Science & AI Systems  
+[GitHub](https://github.com/issa89ai) · [LinkedIn](https://linkedin.com/in/ahmadissa)
