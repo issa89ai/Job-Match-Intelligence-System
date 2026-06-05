@@ -116,20 +116,42 @@ def inject_css() -> None:
 .stApp { background-color: #0a0e1a !important; color: #dde3f0; }
 section[data-testid="stMain"] > div { background-color: #0a0e1a !important; }
 
-/* ── Hide sidebar collapse button icon text ── */
-[data-testid="collapsedControl"] { display: none !important; }
-button[kind="header"] { display: none !important; }
-.st-emotion-cache-1dp5vir { display: none !important; }
+/* ── Hide ALL sidebar toggle buttons and icon text ── */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+section[data-testid="stSidebarCollapsedControl"],
+div[data-testid="collapsedControl"],
+button[data-testid="baseButton-header"],
+button[kind="header"],
+[aria-label="Close sidebar"],
+[aria-label="Open sidebar"],
+.st-emotion-cache-1dp5vir,
+.st-emotion-cache-dvne4q,
 span.css-fblp2m { display: none !important; }
-/* Hide ALL sidebar toggle buttons and their icon text */
-button[data-testid="baseButton-header"] { display: none !important; }
-[data-testid="stSidebarCollapsedControl"] { display: none !important; }
-section[data-testid="stSidebarCollapsedControl"] { display: none !important; }
-div[data-testid="collapsedControl"] { display: none !important; }
-/* Hide the material icon text that leaks out */
-.st-emotion-cache-dvne4q { display: none !important; }
-[aria-label="Close sidebar"] { display: none !important; }
-[aria-label="Open sidebar"] { display: none !important; }
+
+/* Nuclear option — hide any element whose text content is the icon name */
+/* This targets the span inside the sidebar toggle on mobile */
+[data-testid="stSidebar"] ~ div > button { display: none !important; }
+section[data-testid="stSidebarNav"] + div { display: none !important; }
+
+/* Fix mobile sidebar — show as overlay, not push */
+@media (max-width: 768px) {
+    [data-testid="stSidebar"] {
+        position: fixed !important;
+        z-index: 999 !important;
+        height: 100% !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 80vw !important;
+        min-width: unset !important;
+        max-width: 80vw !important;
+    }
+    /* Main content takes full width on mobile */
+    section[data-testid="stMain"] {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+}
 
 /* ── Hide "Press Enter to submit form" tooltip ── */
 .stTextInput div[data-baseweb="input"] + div { display: none !important; }
