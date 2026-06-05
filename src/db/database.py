@@ -37,26 +37,17 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # Override by setting DATABASE_URL env var in the Render dashboard.
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./job_match_app.db")
 
-
 # =========================================================
 # Database Engine
 # =========================================================
 
-# Engine is the core connection interface
-# between Python and the database.
+# Use check_same_thread only for SQLite
+_is_sqlite = DATABASE_URL.startswith("sqlite")
+_connect_args = {"check_same_thread": False} if _is_sqlite else {}
+
 engine = create_engine(
-
     DATABASE_URL,
-
-    # SQLite-specific setting.
-    #
-    # SQLite normally blocks multi-thread access.
-    #
-    # FastAPI uses multiple threads,
-    # so this disables SQLite thread restriction.
-    connect_args={
-        "check_same_thread": False
-    },
+    connect_args=_connect_args,
 )
 
 
