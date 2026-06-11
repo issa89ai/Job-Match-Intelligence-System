@@ -383,12 +383,13 @@ def register_user(
     payload: RegisterRequest,
     db: Session = Depends(get_db),
 ) -> AuthResponse:
-    existing = db.query(User).filter(User.email == payload.email).first()
+    email_lower = payload.email.strip().lower()
+    existing = db.query(User).filter(User.email == email_lower).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered.")
 
     user = User(
-        email=payload.email,
+        email=email_lower,
         password_hash=hash_password(payload.password),
         full_name=payload.full_name,
     )
@@ -416,7 +417,7 @@ def login_user(
     payload: LoginRequest,
     db: Session = Depends(get_db),
 ) -> AuthResponse:
-    user = db.query(User).filter(User.email == payload.email).first()
+    user = db.query(User).filter(User.email == payload.email.strip().lower()).first()
 
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
@@ -1041,11 +1042,12 @@ def _get_jsearch_client() -> JSearchClient:
             detail="JSearch is disabled. Set sources.jsearch.enabled: true in configs/sources.yaml.",
         )
 
-    api_key = jsearch_cfg.get("api_key", "").strip()
+    import os
+    api_key = os.environ.get("JSEARCH_API_KEY", "").strip() or jsearch_cfg.get("api_key", "").strip()
     if not api_key:
         raise HTTPException(
             status_code=500,
-            detail="JSearch API key is missing in configs/sources.yaml.",
+            detail="JSearch API key is missing.",
         )
 
     return JSearchClient(

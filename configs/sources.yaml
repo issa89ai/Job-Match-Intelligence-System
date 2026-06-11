@@ -36,7 +36,7 @@ sources:
 
   jsearch:
     enabled: true                   # Live job search via JSearch (RapidAPI)
-    api_key: "42c92c90a9mshba9c2eef84e2989p1562f1jsne532c9b4ccd9"
+    api_key: "df49b56b12mshb73ccf0995232fep12a0d3jsn7dc85c1955ff"
     host: "jsearch.p.rapidapi.com"
     base_url: "https://jsearch.p.rapidapi.com"
     request_timeout_seconds: 15
