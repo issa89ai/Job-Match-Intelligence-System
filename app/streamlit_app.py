@@ -116,41 +116,54 @@ def inject_css() -> None:
 .stApp { background-color: #0a0e1a !important; color: #dde3f0; }
 section[data-testid="stMain"] > div { background-color: #0a0e1a !important; }
 
-/* ── Hide ALL sidebar toggle buttons and icon text ── */
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapsedControl"],
-section[data-testid="stSidebarCollapsedControl"],
-div[data-testid="collapsedControl"],
-button[data-testid="baseButton-header"],
-button[kind="header"],
-[aria-label="Close sidebar"],
-[aria-label="Open sidebar"],
-.st-emotion-cache-1dp5vir,
-.st-emotion-cache-dvne4q,
-span.css-fblp2m { display: none !important; }
+/* ── Hide sidebar toggle icon TEXT but keep button clickable ── */
+/* Target the span/text inside any sidebar toggle button */
+[data-testid="stSidebarCollapsedControl"] span,
+[data-testid="stSidebarCollapsedControl"] p,
+[data-testid="collapsedControl"] span,
+[data-testid="collapsedControl"] p,
+button[data-testid="baseButton-header"] span,
+button[kind="header"] span {
+    font-size: 0 !important;
+    color: transparent !important;
+    visibility: hidden !important;
+}
 
-/* Nuclear option — hide any element whose text content is the icon name */
-/* This targets the span inside the sidebar toggle on mobile */
-[data-testid="stSidebar"] ~ div > button { display: none !important; }
-section[data-testid="stSidebarNav"] + div { display: none !important; }
+/* Replace with a proper hamburger icon via pseudo-element */
+[data-testid="stSidebarCollapsedControl"] button::before,
+[data-testid="collapsedControl"] button::before {
+    content: "☰" !important;
+    font-size: 20px !important;
+    color: #a78bfa !important;
+    visibility: visible !important;
+}
 
-/* Fix mobile sidebar — show as overlay, not push */
+/* Hide the duplicate arrow buttons */
+button[aria-label="Close sidebar"] span,
+button[aria-label="Open sidebar"] span {
+    font-size: 0 !important;
+    visibility: hidden !important;
+}
+
+/* Mobile layout fix */
 @media (max-width: 768px) {
-    [data-testid="stSidebar"] {
-        position: fixed !important;
-        z-index: 999 !important;
-        height: 100% !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 80vw !important;
-        min-width: unset !important;
-        max-width: 80vw !important;
+    .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        padding-top: 1rem !important;
+        max-width: 100% !important;
     }
-    /* Main content takes full width on mobile */
-    section[data-testid="stMain"] {
-        margin-left: 0 !important;
-        width: 100% !important;
+    h1 { font-size: 1.4rem !important; }
+    h2 { font-size: 1.1rem !important; }
+    .stTabs [data-baseweb="tab"] {
+        font-size: 0.75rem !important;
+        padding: 6px 10px !important;
     }
+    .jm-card { padding: 14px 12px !important; }
+    .score-ring { width: 60px !important; height: 60px !important; font-size: 15px !important; }
+    .apply-btn { display: block !important; text-align: center !important; width: 100% !important; }
+    .stButton > button { width: 100% !important; }
+    .jm-card:hover { transform: none !important; }
 }
 
 /* ── Hide "Press Enter to submit form" tooltip ── */
