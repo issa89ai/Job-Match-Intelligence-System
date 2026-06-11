@@ -880,140 +880,7 @@ with st.sidebar:
     st.divider()
 
     if not st.session_state.is_logged_in:
-        auth_tab = st.radio(
-            "Account",
-            ["Login", "Register", "Forgot Password"],
-            key="auth_tab_selection",
-        )
-
-        # ── Login ──────────────────────────────────────────
-        if auth_tab == "Login":
-            with st.form("login_form"):
-                email = st.text_input("Email", key="login_email")
-                password = st.text_input("Password", type="password", key="login_password")
-                submitted = st.form_submit_button("Login", use_container_width=True)
-
-            if submitted:
-                try:
-                    result = api_post(
-                        "/auth/login",
-                        {"email": email, "password": password},
-                    )
-                    st.session_state.token = result["access_token"]
-                    st.session_state.user_email = result["user_email"]
-                    st.session_state.full_name = result.get("full_name", "")
-                    st.session_state.is_logged_in = True
-                    st.session_state.profile_loaded = False
-                    st.session_state.preferences_loaded = False
-                    st.success("Logged in successfully.")
-                    st.rerun()
-                except Exception as e:
-                    show_api_error(e)
-
-        # ── Register ────────────────────────────────────────
-        elif auth_tab == "Register":
-            with st.form("register_form"):
-                full_name = st.text_input("Full Name", key="register_full_name")
-                email = st.text_input("Email", key="register_email")
-                password = st.text_input("Password", type="password", key="register_password")
-                submitted = st.form_submit_button("Register", use_container_width=True)
-
-            if submitted:
-                try:
-                    result = api_post(
-                        "/auth/register",
-                        {
-                            "full_name": full_name,
-                            "email": email,
-                            "password": password,
-                        },
-                    )
-                    st.session_state.token = result["access_token"]
-                    st.session_state.user_email = result["user_email"]
-                    st.session_state.full_name = result.get("full_name", "")
-                    st.session_state.is_logged_in = True
-                    st.session_state.profile_loaded = False
-                    st.session_state.preferences_loaded = False
-                    st.success("Account created successfully.")
-                    st.rerun()
-                except Exception as e:
-                    show_api_error(e)
-
-        # ── Forgot Password ─────────────────────────────────
-        else:
-            st.subheader("Reset Your Password")
-            st.write("Enter your email to receive a reset link, or paste a reset token you already received.")
-
-            # Step 1 — request reset email
-            with st.form("forgot_password_form"):
-                forgot_email = st.text_input("Registered Email", key="forgot_email")
-                send_submitted = st.form_submit_button("Send Reset Link", use_container_width=True)
-
-            if send_submitted:
-                if not forgot_email.strip():
-                    st.warning("Please enter your email address.")
-                else:
-                    try:
-                        result = api_post(
-                            "/auth/forgot-password",
-                            {"email": forgot_email.strip()},
-                        )
-                        dev_token = result.get("dev_token", "")
-                        if dev_token:
-                            # Email not configured — show the token directly
-                            st.warning(result.get("message", ""))
-                            st.info(
-                                "**Your reset token (copy this):**\n\n"
-                                f"`{dev_token}`\n\n"
-                                "Paste it into the form below to set your new password."
-                            )
-                            # Pre-fill the token field
-                            st.session_state["prefill_reset_token"] = dev_token
-                        else:
-                            st.success(result.get("message", "Reset link sent — check your inbox."))
-                    except Exception as e:
-                        show_api_error(e)
-
-            st.divider()
-
-            # Step 2 — enter token + new password
-            st.write("**Already have a reset token?** Paste it below and choose a new password.")
-
-            # Pre-fill from URL query param (?reset_token=...) or from the
-            # dev_token returned when email isn't configured
-            url_token = (
-                st.query_params.get("reset_token", "")
-                or st.session_state.get("prefill_reset_token", "")
-            )
-
-            with st.form("reset_password_form"):
-                reset_token = st.text_input(
-                    "Reset Token (from your email)",
-                    value=url_token,
-                    key="reset_token_input",
-                )
-                new_pass = st.text_input("New Password", type="password", key="reset_new_password")
-                confirm_pass = st.text_input("Confirm New Password", type="password", key="reset_confirm_password")
-                reset_submitted = st.form_submit_button("Reset Password", use_container_width=True)
-
-            if reset_submitted:
-                if not reset_token.strip():
-                    st.warning("Please paste your reset token.")
-                elif len(new_pass) < 8:
-                    st.warning("Password must be at least 8 characters.")
-                elif new_pass != confirm_pass:
-                    st.warning("Passwords do not match.")
-                else:
-                    try:
-                        result = api_post(
-                            "/auth/reset-password",
-                            {"token": reset_token.strip(), "new_password": new_pass},
-                        )
-                        st.success(result.get("message", "Password reset successfully. You can now log in."))
-                        # Clear the token from URL
-                        st.query_params.clear()
-                    except Exception as e:
-                        show_api_error(e)
+        st.caption("← Login from the main page")
 
     else:
         st.success("Logged in")
@@ -1033,34 +900,97 @@ if st.session_state.is_logged_in:
 # Main app
 # ============================================================
 if not st.session_state.is_logged_in:
-    # Auto-open sidebar on mobile via JS
     st.markdown("""
-<script>
-(function() {
-    function openSidebar() {
-        if (window.innerWidth <= 768) {
-            var btn = document.querySelector('[data-testid="stSidebarCollapsedControl"] button');
-            if (btn) { btn.click(); }
-            else { setTimeout(openSidebar, 500); }
-        }
-    }
-    setTimeout(openSidebar, 800);
-})();
-</script>
-""", unsafe_allow_html=True)
-    st.markdown("""
-<div style="text-align:center; padding: 40px 20px;">
-    <div style="font-size: 3rem; margin-bottom: 16px;">💼</div>
-    <h2 style="color: #a78bfa; margin-bottom: 12px;">Welcome to Job Match Intelligence System</h2>
-    <p style="color: #94a3b8; font-size: 1rem; margin-bottom: 24px;">Find jobs that match your skills — powered by AI</p>
-    <div style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3); border-radius: 14px; padding: 20px; display: inline-block;">
-        <p style="color: #cbd5e1; margin: 0; font-size: 1rem;">
-            📱 <strong>On mobile:</strong> Tap the <strong>☰ menu</strong> at the top left to login or register<br><br>
-            🖥️ <strong>On desktop:</strong> Use the sidebar on the left
-        </p>
-    </div>
+<div style="text-align:center; padding: 20px 0 10px 0;">
+    <div style="font-size: 2.5rem; margin-bottom: 8px;">💼</div>
+    <h2 style="color: #a78bfa; margin-bottom: 4px;">Job Match Intelligence System</h2>
+    <p style="color: #64748b; font-size: 0.95rem;">Find jobs that match your skills — powered by AI</p>
 </div>
 """, unsafe_allow_html=True)
+
+    auth_tab = st.radio("", ["Login", "Register", "Forgot Password"],
+                        horizontal=True, key="auth_tab_main")
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if auth_tab == "Login":
+            with st.form("login_form_main"):
+                email = st.text_input("Email", key="login_email_main")
+                password = st.text_input("Password", type="password", key="login_password_main")
+                submitted = st.form_submit_button("Login", use_container_width=True)
+            if submitted:
+                try:
+                    result = api_post("/auth/login", {"email": email, "password": password})
+                    st.session_state.token = result["access_token"]
+                    st.session_state.user_email = result["user_email"]
+                    st.session_state.full_name = result.get("full_name", "")
+                    st.session_state.is_logged_in = True
+                    st.session_state.profile_loaded = False
+                    st.session_state.preferences_loaded = False
+                    st.success("Logged in successfully.")
+                    st.rerun()
+                except Exception as e:
+                    show_api_error(e)
+
+        elif auth_tab == "Register":
+            with st.form("register_form_main"):
+                full_name = st.text_input("Full Name", key="register_full_name_main")
+                email = st.text_input("Email", key="register_email_main")
+                password = st.text_input("Password", type="password", key="register_password_main")
+                submitted = st.form_submit_button("Register", use_container_width=True)
+            if submitted:
+                try:
+                    result = api_post("/auth/register", {"full_name": full_name, "email": email, "password": password})
+                    st.session_state.token = result["access_token"]
+                    st.session_state.user_email = result["user_email"]
+                    st.session_state.full_name = result.get("full_name", "")
+                    st.session_state.is_logged_in = True
+                    st.session_state.profile_loaded = False
+                    st.session_state.preferences_loaded = False
+                    st.success("Account created successfully.")
+                    st.rerun()
+                except Exception as e:
+                    show_api_error(e)
+
+        else:
+            with st.form("forgot_form_main"):
+                forgot_email = st.text_input("Registered Email", key="forgot_email_main")
+                send_submitted = st.form_submit_button("Send Reset Link", use_container_width=True)
+            if send_submitted:
+                if not forgot_email.strip():
+                    st.warning("Please enter your email address.")
+                else:
+                    try:
+                        result = api_post("/auth/forgot-password", {"email": forgot_email.strip()})
+                        dev_token = result.get("dev_token", "")
+                        if dev_token:
+                            st.warning(result.get("message", ""))
+                            st.info(f"**Reset token:** `{dev_token}`")
+                            st.session_state["prefill_reset_token"] = dev_token
+                        else:
+                            st.success(result.get("message", "Reset link sent — check your inbox."))
+                    except Exception as e:
+                        show_api_error(e)
+
+            url_token = st.query_params.get("reset_token", "") or st.session_state.get("prefill_reset_token", "")
+            with st.form("reset_form_main"):
+                reset_token = st.text_input("Reset Token", value=url_token, key="reset_token_main")
+                new_pass = st.text_input("New Password", type="password", key="reset_new_main")
+                confirm_pass = st.text_input("Confirm Password", type="password", key="reset_confirm_main")
+                reset_submitted = st.form_submit_button("Reset Password", use_container_width=True)
+            if reset_submitted:
+                if not reset_token.strip():
+                    st.warning("Please paste your reset token.")
+                elif len(new_pass) < 8:
+                    st.warning("Password must be at least 8 characters.")
+                elif new_pass != confirm_pass:
+                    st.warning("Passwords do not match.")
+                else:
+                    try:
+                        api_post("/auth/reset-password", {"token": reset_token.strip(), "new_password": new_pass})
+                        st.success("Password reset! You can now log in.")
+                    except Exception as e:
+                        show_api_error(e)
     st.stop()
 
 
