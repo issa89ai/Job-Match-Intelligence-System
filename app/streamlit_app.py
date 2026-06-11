@@ -1374,6 +1374,10 @@ with page[0]:
             except Exception as e:
                 show_api_error(e)
 
+    st.divider()
+    if st.button("🚪 Sign Out", use_container_width=True):
+        logout()
+
 
 # ============================================================
 # My Job Matches  (unified live search + ranking by fit)
