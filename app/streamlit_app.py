@@ -1020,7 +1020,34 @@ if st.session_state.is_logged_in:
 # Main app
 # ============================================================
 if not st.session_state.is_logged_in:
-    st.info("Please login or register from the sidebar to use the app.")
+    # Auto-open sidebar on mobile via JS
+    st.markdown("""
+<script>
+(function() {
+    function openSidebar() {
+        if (window.innerWidth <= 768) {
+            var btn = document.querySelector('[data-testid="stSidebarCollapsedControl"] button');
+            if (btn) { btn.click(); }
+            else { setTimeout(openSidebar, 500); }
+        }
+    }
+    setTimeout(openSidebar, 800);
+})();
+</script>
+""", unsafe_allow_html=True)
+    st.markdown("""
+<div style="text-align:center; padding: 40px 20px;">
+    <div style="font-size: 3rem; margin-bottom: 16px;">💼</div>
+    <h2 style="color: #a78bfa; margin-bottom: 12px;">Welcome to Job Match Intelligence System</h2>
+    <p style="color: #94a3b8; font-size: 1rem; margin-bottom: 24px;">Find jobs that match your skills — powered by AI</p>
+    <div style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3); border-radius: 14px; padding: 20px; display: inline-block;">
+        <p style="color: #cbd5e1; margin: 0; font-size: 1rem;">
+            📱 <strong>On mobile:</strong> Tap the <strong>☰ menu</strong> at the top left to login or register<br><br>
+            🖥️ <strong>On desktop:</strong> Use the sidebar on the left
+        </p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
     st.stop()
 
 
