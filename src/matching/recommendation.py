@@ -92,7 +92,7 @@ def _job_matches_preferences(
         preferences.get("preferred_seniority")
     )
 
-    min_score = preferences.get("min_score", 0) or 0
+    min_score = preferences.get("min_score", 70) or 70
 
     # Normalize job fields.
     job_title = _normalize_text(job.get("title"))

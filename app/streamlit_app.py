@@ -747,7 +747,7 @@ def build_preferences_payload() -> Dict[str, Any]:
         "preferred_workplace_types": split_csv(st.session_state.get("preferred_workplace_types", "")),
         "preferred_domains": split_csv(st.session_state.get("preferred_domains", "")),
         "preferred_seniority": st.session_state.get("preferred_seniority") or None,
-        "min_score": int(st.session_state.get("min_score", 50)),
+        "min_score": int(st.session_state.get("min_score", 70)),
     }
 
 
@@ -1442,8 +1442,17 @@ with page[1]:
                 key="matches_date_posted",
             )
 
+        matches_min_score = st.slider(
+            "🎯 Minimum Match Score — only show jobs at or above this %",
+            min_value=50,
+            max_value=100,
+            value=st.session_state.get("live_min_score", 70),
+            step=5,
+            key="live_min_score",
+        )
+
         matches_use_prefs = st.checkbox(
-            "Apply my saved preferences (location filter, min score, seniority…)",
+            "Also apply my saved preferences (title filter, location filter, seniority…)",
             value=False,
             key="matches_use_prefs",
         )
@@ -1460,6 +1469,12 @@ with page[1]:
             else:
                 try:
                     with st.spinner(f"Searching live jobs for '{matches_query}'…"):
+                        # Build preferences — min_score is ALWAYS enforced;
+                        # saved preferences (title/location/seniority filters)
+                        # only apply when the user checks the box.
+                        live_prefs = build_preferences_payload() if matches_use_prefs else {}
+                        live_prefs["min_score"] = int(st.session_state.get("live_min_score", 70))
+
                         live_payload = {
                             "candidate": {
                                 "candidate_id": active_profile.get("candidate_id", ""),
@@ -1480,7 +1495,7 @@ with page[1]:
                             "location": matches_location.strip(),
                             "top_k": int(matches_top_k),
                             "date_posted": matches_date_posted,
-                            "preferences": build_preferences_payload() if matches_use_prefs else None,
+                            "preferences": live_prefs,
                         }
                         live_result = api_post("/recommendations/live", live_payload)
                         st.session_state["last_live_recommendations"] = live_result
@@ -1640,7 +1655,7 @@ with page[2]:
         "Minimum Match Score (%)",
         min_value=0,
         max_value=100,
-        value=int(preference_value("min_score", 50) or 50),
+        value=int(preference_value("min_score", 70) or 70),
         key="min_score",
     )
 
