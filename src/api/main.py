@@ -1101,7 +1101,7 @@ def _live_recommendations_inner(payload: LiveRecommendationRequest) -> Recommend
     if not jobs:
         return RecommendationResponse(count=0, recommendations=[], dataset_path="live")
 
-    prefs = payload.preferences.dict() if payload.preferences else None
+    prefs = payload.preferences if payload.preferences else None
     top_k = payload.top_k or 5
 
     # recommend_jobs_for_candidate handles parsing internally and returns
