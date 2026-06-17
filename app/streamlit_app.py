@@ -747,7 +747,7 @@ def build_preferences_payload() -> Dict[str, Any]:
         "preferred_workplace_types": split_csv(st.session_state.get("preferred_workplace_types", "")),
         "preferred_domains": split_csv(st.session_state.get("preferred_domains", "")),
         "preferred_seniority": st.session_state.get("preferred_seniority") or None,
-        "min_score": int(st.session_state.get("min_score", 70)),
+        "min_score": int(st.session_state.get("min_score", 55)),
     }
 
 
@@ -1442,11 +1442,18 @@ with page[1]:
                 key="matches_date_posted",
             )
 
+        _min_score_val = st.session_state.get("live_min_score", 40)
+        _score_label = (
+            "🟢 Strong match only (75%+)" if _min_score_val >= 75 else
+            "🟡 Good matches (60–74%)" if _min_score_val >= 60 else
+            "🔵 All relevant results (below 60%)" if _min_score_val >= 40 else
+            "⚪ Show everything"
+        )
         matches_min_score = st.slider(
-            "🎯 Minimum Match Score — only show jobs at or above this %",
-            min_value=50,
+            f"🎯 Minimum Match Score — {_score_label}",
+            min_value=0,
             max_value=100,
-            value=st.session_state.get("live_min_score", 70),
+            value=_min_score_val,
             step=5,
             key="live_min_score",
         )
@@ -1655,7 +1662,7 @@ with page[2]:
         "Minimum Match Score (%)",
         min_value=0,
         max_value=100,
-        value=int(preference_value("min_score", 70) or 70),
+        value=int(preference_value("min_score", 55) or 55),
         key="min_score",
     )
 
