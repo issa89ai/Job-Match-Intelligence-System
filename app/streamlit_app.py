@@ -1437,7 +1437,7 @@ with page[1]:
                 "Date Posted",
                 options=["all", "today", "3days", "week", "month"],
                 index=["all", "today", "3days", "week", "month"].index(
-                    st.session_state.get("matches_date_posted", "week")
+                    st.session_state.get("matches_date_posted", "all")
                 ),
                 key="matches_date_posted",
             )
@@ -1480,7 +1480,7 @@ with page[1]:
                         # saved preferences (title/location/seniority filters)
                         # only apply when the user checks the box.
                         live_prefs = build_preferences_payload() if matches_use_prefs else {}
-                        live_prefs["min_score"] = int(st.session_state.get("live_min_score", 70))
+                        live_prefs["min_score"] = int(st.session_state.get("live_min_score", 0))
 
                         live_payload = {
                             "candidate": {

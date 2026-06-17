@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import traceback
 from typing import Any, Dict, List, Optional
 
 # Convert parsed candidate profile into matching-ready features.
@@ -210,8 +211,9 @@ def recommend_jobs_for_candidate(
 
             results.append(recommendation)
 
-        except Exception:
-            # If one job fails, skip it and continue ranking others.
+        except Exception as _exc:
+            # Log the error so we can debug scoring failures, then skip this job.
+            print(f"[recommendation] scoring error for job '{job.get('job_id', '?')}': {_exc}\n{traceback.format_exc()}")
             continue
 
     # Step 6: Sort jobs by highest score.

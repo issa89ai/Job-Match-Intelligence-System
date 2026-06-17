@@ -40,7 +40,7 @@ sources:
     host: "jsearch.p.rapidapi.com"
     base_url: "https://jsearch.p.rapidapi.com"
     request_timeout_seconds: 15
-    max_results_per_query: 10       # Jobs fetched per search (max 10 on free plan)
+    max_results_per_query: 20       # Jobs fetched per search (2 pages × 10)
 
 
 # Email / SMTP configuration (used for password reset emails)

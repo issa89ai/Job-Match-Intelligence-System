@@ -1090,13 +1090,31 @@ def _live_recommendations_inner(payload: LiveRecommendationRequest) -> Recommend
             detail="Live job search is not configured. Check sources.yaml → jsearch section.",
         )
 
+    date_filter = (payload.date_posted or "all").strip()
+
     raw_jobs = client.search_jobs(
         query=payload.search_query,
         location=payload.location or "",
-        date_posted=payload.date_posted or "all",
-        num_pages=1,
+        date_posted=date_filter,
+        num_pages=2,
     )
+
+    print(f"[live] JSearch raw_jobs={len(raw_jobs)} for query='{payload.search_query}' date_posted='{date_filter}'")
+
+    # If the date filter returned nothing, automatically fall back to "all" so the
+    # user always sees results even when the weekly/monthly index is empty.
+    if not raw_jobs and date_filter != "all":
+        print(f"[live] 0 results with date_posted='{date_filter}', retrying with 'all'")
+        raw_jobs = client.search_jobs(
+            query=payload.search_query,
+            location=payload.location or "",
+            date_posted="all",
+            num_pages=2,
+        )
+        print(f"[live] Fallback 'all' returned {len(raw_jobs)} raw jobs")
+
     jobs = client.normalize_jobs(raw_jobs)
+    print(f"[live] normalized_jobs={len(jobs)}")
 
     if not jobs:
         return RecommendationResponse(count=0, recommendations=[], dataset_path="live")
