@@ -167,6 +167,24 @@ button[aria-label="Open sidebar"] span {
     visibility: hidden !important;
 }
 
+/* Fix Material Icons rendering as raw text (e.g. _arrow_right) in expanders */
+[data-testid="stExpander"] summary span[data-testid="stMarkdownContainer"] p,
+[data-testid="stExpander"] > div > div > div > details > summary > span:first-child {
+    font-family: inherit !important;
+}
+.streamlit-expanderHeader span[style*="font-family: 'Material Icons'"],
+details summary .eyeqlp51 {
+    font-size: 0 !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+/* Hide raw icon text nodes that appear before expander labels */
+[data-testid="stExpander"] details summary::before {
+    content: "▶ " !important;
+    font-size: 0.75rem !important;
+    color: #6366f1 !important;
+}
+
 /* Mobile layout fix */
 @media (max-width: 768px) {
     .block-container {
