@@ -45,6 +45,19 @@ def get_tag_list(key: str, fallback: Optional[List[str]] = None) -> List[str]:
     return split_csv(str(val))
 
 
+def _clear_profile_form() -> None:
+    """Delete all candidate form field keys from session state so the form
+    reinitializes cleanly from the newly loaded profile."""
+    for key in [
+        "candidate_profile_name", "candidate_full_name", "candidate_current_title",
+        "candidate_location", "candidate_education", "candidate_years_experience",
+        "candidate_seniority", "candidate_skills", "candidate_tools",
+        "candidate_domains", "candidate_certifications", "candidate_projects",
+        "candidate_summary",
+    ]:
+        st.session_state.pop(key, None)
+
+
 def join_list(values: Optional[List[str]]) -> str:
     if not values:
         return ""
@@ -1049,6 +1062,7 @@ with page[0]:
                     profile = api_get(f"/profiles/{selected_id}")
                     st.session_state.saved_profile = profile
                     st.session_state.active_profile_id = selected_id
+                    _clear_profile_form()
                     st.rerun()
                 except Exception as e:
                     show_api_error(e)
@@ -1072,6 +1086,7 @@ with page[0]:
                 st.session_state.active_profile_id = new_profile["candidate_id"]
                 st.session_state.saved_profile = new_profile
                 st.session_state.profiles_loaded = False   # force refresh
+                _clear_profile_form()
                 st.success("New profile created.")
                 st.rerun()
             except Exception as e:
