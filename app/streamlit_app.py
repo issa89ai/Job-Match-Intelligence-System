@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 import streamlit as st
+from streamlit_tags import st_tags
 
 # ── Default API URL: Streamlit secrets → env var → localhost ──
 def _default_api_url() -> str:
@@ -34,6 +35,14 @@ def split_csv(text: str) -> List[str]:
     if not text or not text.strip():
         return []
     return [item.strip() for item in text.split(",") if item.strip()]
+
+
+def get_tag_list(key: str, fallback: Optional[List[str]] = None) -> List[str]:
+    """Read a tag-input field from session state — handles list (st_tags) or legacy string."""
+    val = st.session_state.get(key, fallback or [])
+    if isinstance(val, list):
+        return [str(v).strip() for v in val if str(v).strip()]
+    return split_csv(str(val))
 
 
 def join_list(values: Optional[List[str]]) -> str:
@@ -711,11 +720,11 @@ def build_candidate_payload() -> Dict[str, Any]:
         "location": st.session_state.get("candidate_location", ""),
         "education": st.session_state.get("candidate_education") or None,
         "years_experience": int(st.session_state.get("candidate_years_experience", 0)),
-        "skills": split_csv(st.session_state.get("candidate_skills", "")),
-        "tools": split_csv(st.session_state.get("candidate_tools", "")),
-        "domains": split_csv(st.session_state.get("candidate_domains", "")),
-        "certifications": split_csv(st.session_state.get("candidate_certifications", "")),
-        "projects": split_csv(st.session_state.get("candidate_projects", "")),
+        "skills": get_tag_list("candidate_skills"),
+        "tools": get_tag_list("candidate_tools"),
+        "domains": get_tag_list("candidate_domains"),
+        "certifications": get_tag_list("candidate_certifications"),
+        "projects": get_tag_list("candidate_projects"),
         "seniority": st.session_state.get("candidate_seniority") or None,
         "summary": st.session_state.get("candidate_summary") or None,
     }
@@ -1131,12 +1140,12 @@ with page[0]:
         return {"score": score, "missing": missing}
 
     current_profile_for_score = {
-        "skills":           split_csv(st.session_state.get("candidate_skills", "")) or profile_value("skills", []),
+        "skills":           get_tag_list("candidate_skills") or profile_value("skills", []),
         "years_experience": st.session_state.get("candidate_years_experience") or profile_value("years_experience", 0),
         "current_title":    st.session_state.get("candidate_current_title") or profile_value("current_title", ""),
         "education":        st.session_state.get("candidate_education") or profile_value("education", ""),
         "seniority":        st.session_state.get("candidate_seniority") or profile_value("seniority", ""),
-        "domains":          split_csv(st.session_state.get("candidate_domains", "")) or profile_value("domains", []),
+        "domains":          get_tag_list("candidate_domains") or profile_value("domains", []),
         "summary":          st.session_state.get("candidate_summary") or profile_value("summary", ""),
         "location":         st.session_state.get("candidate_location") or profile_value("location", ""),
     }
@@ -1239,17 +1248,17 @@ with page[0]:
         if ex.get("seniority"):
             st.session_state["candidate_seniority"] = ex["seniority"]
         if ex.get("skills"):
-            st.session_state["candidate_skills"] = ", ".join(ex["skills"])
+            st.session_state["candidate_skills"] = list(ex["skills"])
         if ex.get("tools"):
-            st.session_state["candidate_tools"] = ", ".join(ex["tools"])
+            st.session_state["candidate_tools"] = list(ex["tools"])
         if ex.get("domains"):
-            st.session_state["candidate_domains"] = ", ".join(ex["domains"])
+            st.session_state["candidate_domains"] = list(ex["domains"])
         if ex.get("summary"):
             st.session_state["candidate_summary"] = ex["summary"]
         if ex.get("certifications"):
-            st.session_state["candidate_certifications"] = ", ".join(ex["certifications"])
+            st.session_state["candidate_certifications"] = list(ex["certifications"])
         if ex.get("projects"):
-            st.session_state["candidate_projects"] = ", ".join(ex["projects"])
+            st.session_state["candidate_projects"] = list(ex["projects"])
         # Clear so it doesn't re-apply on every rerun
         st.session_state["resume_extracted"] = None
 
@@ -1309,36 +1318,41 @@ with page[0]:
             else 0,
             key="candidate_seniority",
         )
-        st.text_area(
-            "Skills",
-            value=join_list(profile_value("skills", [])),
+        st_tags(
+            label="Skills",
+            text="Type a skill and press Enter ↵",
+            value=profile_value("skills", []),
             key="candidate_skills",
-            help="Comma-separated values",
+            maxtags=-1,
         )
-        st.text_area(
-            "Tools",
-            value=join_list(profile_value("tools", [])),
+        st_tags(
+            label="Tools",
+            text="Type a tool and press Enter ↵",
+            value=profile_value("tools", []),
             key="candidate_tools",
-            help="Comma-separated values",
+            maxtags=-1,
         )
-        st.text_area(
-            "Domains",
-            value=join_list(profile_value("domains", [])),
+        st_tags(
+            label="Domains",
+            text="Type a domain and press Enter ↵",
+            value=profile_value("domains", []),
             key="candidate_domains",
-            help="Comma-separated values",
+            maxtags=-1,
         )
 
-    st.text_area(
-        "Certifications",
-        value=join_list(profile_value("certifications", [])),
+    st_tags(
+        label="Certifications",
+        text="Type a certification and press Enter ↵",
+        value=profile_value("certifications", []),
         key="candidate_certifications",
-        help="Comma-separated values",
+        maxtags=-1,
     )
-    st.text_area(
-        "Projects",
-        value=join_list(profile_value("projects", [])),
+    st_tags(
+        label="Projects",
+        text="Type a project and press Enter ↵",
+        value=profile_value("projects", []),
         key="candidate_projects",
-        help="Comma-separated values",
+        maxtags=-1,
     )
     st.text_area(
         "Summary",
@@ -1358,11 +1372,11 @@ with page[0]:
                     "location": st.session_state.get("candidate_location", ""),
                     "education": st.session_state.get("candidate_education") or None,
                     "years_experience": int(st.session_state.get("candidate_years_experience", 0)),
-                    "skills": split_csv(st.session_state.get("candidate_skills", "")),
-                    "tools": split_csv(st.session_state.get("candidate_tools", "")),
-                    "domains": split_csv(st.session_state.get("candidate_domains", "")),
-                    "certifications": split_csv(st.session_state.get("candidate_certifications", "")),
-                    "projects": split_csv(st.session_state.get("candidate_projects", "")),
+                    "skills": get_tag_list("candidate_skills"),
+                    "tools": get_tag_list("candidate_tools"),
+                    "domains": get_tag_list("candidate_domains"),
+                    "certifications": get_tag_list("candidate_certifications"),
+                    "projects": get_tag_list("candidate_projects"),
                     "seniority": st.session_state.get("candidate_seniority") or None,
                     "summary": st.session_state.get("candidate_summary") or None,
                 }
